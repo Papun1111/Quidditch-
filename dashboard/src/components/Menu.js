@@ -80,6 +80,17 @@ const Menu = () => {
           <li>
             <Link
               style={{ textDecoration: "none" }}
+              to="buyactionwindow"
+              onClick={() => handleMenuClick(5)}
+            >
+              <p className={selectedMenu === 4 ? activeMenuClass : menuClass}>
+                BuyActionWindow
+              </p>
+            </Link>
+          </li>
+          <li>
+            <Link
+              style={{ textDecoration: "none" }}
               to="/apps"
               onClick={() => handleMenuClick(6)}
             >

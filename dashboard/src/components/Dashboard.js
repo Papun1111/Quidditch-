@@ -10,6 +10,7 @@ import Positions from "./Positions";
 import Summary from "./Summary";
 import WatchList from "./WatchList";
 import { GeneralContextProvider } from "./GeneralContext";
+import BuyActionWindow from "./BuyActionWindow";
 
 const Dashboard = () => {
   return (
@@ -25,6 +26,7 @@ const Dashboard = () => {
           <Route path="/positions" element={<Positions />} />
           <Route path="/funds" element={<Funds />} />
           <Route path="/apps" element={<Apps />} />
+          <Route path="/buyactionwindow" element={<BuyActionWindow/>} />
         </Routes>
       </div>
     </div>
