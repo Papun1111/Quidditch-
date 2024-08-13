@@ -1,11 +1,12 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 export default function Pricing() {
     return ( <div className='container'>
         <div className="row">
             <div className='col-4'>
                 <h1 className='mb-3 fs-2'>Unbeatable pricing</h1>
             <p>we pioneered the concept of discount broking and price transparency in india. Flat fees and no hidden charges</p>
-            <a className="mx-5" style={{textDecoration:"none"}} href="">See pricing<i class="fa-solid fa-arrow-right"></i></a>
+            <Link className="mx-5" style={{textDecoration:"none"}} to="/pricing">See pricing<i class="fa-solid fa-arrow-right"></i></Link>
             </div>
             <div className='col-2'></div>
             <div className='col-6 mb-5'>

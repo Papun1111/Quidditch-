@@ -30,7 +30,7 @@ export default function Stats() {
           <img src="media/ecosystem.png" style={{ width: "90%" }}></img>
         <div className="text-center mb-5">
             <a className="mx-5" style={{textDecoration:"none"}} href="">Explore<i class="fa-solid fa-arrow-right"></i></a>
-            <a style={{textDecoration:"none"}} href="">Try Kite demo<i class="fa-solid fa-arrow-right"></i></a>
+            <a style={{textDecoration:"none"}} href="https://zerodhaclonerepodashboard.onrender.com/">Try Kite demo<i class="fa-solid fa-arrow-right"></i></a>
         </div>
         </div>
       </div>
