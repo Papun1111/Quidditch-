@@ -1,5 +1,5 @@
-import mongoose, { Schema } from "mongoose";
-const userSchema=new Schema({
+import mongoose from "mongoose";
+const userSchema=Schema.mongoose({
     username:String,
     name:String,
     password:String

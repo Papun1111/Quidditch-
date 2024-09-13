@@ -39,7 +39,7 @@ const Signup = () => {
     if (!validateForm()) return;
 
     try {
-      const response = await axios.post('/api/signup', formData);
+      const response = await axios.post('https://zerodhaclonerepo.onrender.com/api/signup', formData);
       if (response.status === 200) {
         setSuccessMessage('Signup successful!');
         setFormData({ name: '', email: '', password: '' });
