@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 const userSchema=Schema.mongoose({
     username:String,
     name:String,
