@@ -2,15 +2,15 @@ import React from "react";
 export default function Hero() {
   return (
     <div className="container border-bottom mb-5">
-      <div className="row p-5 mt-5 mb-5">
-        <h1 className="fs-2 text-center">
+      <div className="row p-3 p-md-5 mt-3 mt-md-5 mb-4">
+        <h1 className="fs-3 fs-md-2 text-center">
           We pioneered the discount broking model in India
           <br />
-          Now,we are breaking ground with our technology
+          Now, we are breaking ground with our technology
         </h1>
       </div>
-      <div className="row p-5 mt-5 border-top text-muted">
-      <div className="col-6 p-5 fs-6">
+      <div className="row p-3 p-md-5 mt-3 mt-md-5 border-top text-muted">
+        <div className="col-12 col-md-6 p-3 p-md-5 fs-6">
           <p>
             We kick-started operations on the 15th of August, 2010 with the goal
             of breaking all barriers that traders and investors face in India in
@@ -28,7 +28,7 @@ export default function Hero() {
             all Indian retail trading volumes.
           </p>
         </div>
-        <div className="col-6 p-5 fs-6">
+        <div className="col-12 col-md-6 p-3 p-md-5 fs-6">
           <p>
             In addition, we run a number of popular open online educational and
             community initiatives to empower retail traders and investors.
