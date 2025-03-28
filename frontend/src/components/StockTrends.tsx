@@ -17,6 +17,7 @@ interface StockTrend {
   symbol: string;
   currentPrice: number;
   volume: number;
+  dayChangePercent: number;
 }
 
 const StockTrends: React.FC = () => {

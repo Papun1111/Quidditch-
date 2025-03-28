@@ -7,26 +7,34 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import axios from 'axios';
 
 import { User } from './model/userModels.js';
-import { PositionsModel } from './model/PositionsModel.js';
 import { OrdersModel } from './model/OrdersModel.js';
 import { HoldingsModel } from './model/HoldingsModel.js';
+// (Positions will be computed dynamically based on holdings and live data.)
 
 const PORT = process.env.PORT || 3000;
-const url = process.env.MONGO_URL;
+const mongoURL = process.env.MONGO_URL;
 
 const app = express();
-
 app.use(cors());
 app.use(bodyParser.json());
 
-// Authentication middleware to protect routes
+// ---------- Demo Data for fallback ----------
+const demoStockData = {
+  "RELIANCE": { price: 2400, volume: 20000, dayChangePercent: 0.5 },
+  "TCS": { price: 3500, volume: 15000, dayChangePercent: 0.7 },
+  "INFY": { price: 1500, volume: 25000, dayChangePercent: -0.3 },
+  "HDFC": { price: 3000, volume: 12000, dayChangePercent: 0.2 },
+  "ICICIBANK": { price: 650, volume: 30000, dayChangePercent: -0.1 }
+};
+
+// ---------- Authentication Middleware ----------
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'No token provided' });
-  
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: 'Invalid token' });
     req.user = user;
@@ -34,48 +42,36 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Signup endpoint
+// ---------- Signup Endpoint (Auto-Login) ----------
 app.post('/api/signup', async (req, res) => {
   const { username, name, email, password } = req.body;
-
-  // Validate required fields
   if (!username || !name || !email || !password) {
     return res.status(400).json({ message: 'All fields are required' });
   }
-
   try {
-    // Check if either email or username is already taken
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
-
     const newUser = new User({ username, name, email, password });
     await newUser.save();
-
-    res.status(201).json({ message: 'User created successfully' });
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    res.status(201).json({ token, message: 'User created successfully' });
   } catch (error) {
     console.error('Signup Error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Login endpoint
+// ---------- Login Endpoint ----------
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
-
-  // Simple validation
-  if (!email || !password) {
-    return res.status(400).json({ message: 'All fields are required' });
-  }
-
+  if (!email || !password) return res.status(400).json({ message: 'All fields are required' });
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-    
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-    
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.json({ token });
   } catch (error) {
@@ -84,8 +80,8 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Get holdings for authenticated user
-app.get("/api/holdings", authenticateToken, async (req, res) => {
+// ---------- Holdings Endpoint ----------
+app.get('/api/holdings', authenticateToken, async (req, res) => {
   try {
     const holdings = await HoldingsModel.find({ userId: req.user.id });
     res.json(holdings);
@@ -94,133 +90,197 @@ app.get("/api/holdings", authenticateToken, async (req, res) => {
   }
 });
 
-// Get positions for authenticated user
-app.get("/api/positions", authenticateToken, async (req, res) => {
+// ---------- Positions Endpoint (Dynamic, with Fallback) ----------
+app.get('/api/positions', authenticateToken, async (req, res) => {
   try {
-    const positions = await PositionsModel.find({ userId: req.user.id });
-    res.json(positions);
+    const holdings = await HoldingsModel.find({ userId: req.user.id });
+    const positions = await Promise.all(holdings.map(async (holding) => {
+      const symbol = holding.symbol;
+      if (!symbol || symbol.trim() === "") {
+        console.error(`Empty symbol for holding:`, holding);
+        return null;
+      }
+      const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+      const stockUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}.NS&apikey=${apiKey}`;
+      try {
+        const stockResponse = await axios.get(stockUrl);
+        const data = stockResponse.data["Global Quote"];
+        if (!data || !data["05. price"]) {
+          console.error(`Error fetching data for ${symbol}:`, data);
+          // Use demo data if available, otherwise fallback to holding data
+          const demo = demoStockData[symbol] || { price: holding.averagePrice, dayChangePercent: 0 };
+          return {
+            symbol,
+            companyName: symbol,
+            quantity: holding.quantity,
+            averagePrice: holding.averagePrice,
+            currentPrice: demo.price,
+            netChange: (demo.price - holding.averagePrice) * holding.quantity,
+            dayChangePercent: demo.dayChangePercent,
+            isLoss: demo.price < holding.averagePrice
+          };
+        }
+        const currentPrice = parseFloat(data["05. price"]);
+        const changePercentStr = data["10. change percent"];
+        const dayChangePercent = changePercentStr ? parseFloat(changePercentStr.replace('%', '')) : 0;
+        return {
+          symbol,
+          companyName: symbol,
+          quantity: holding.quantity,
+          averagePrice: holding.averagePrice,
+          currentPrice,
+          netChange: (currentPrice - holding.averagePrice) * holding.quantity,
+          dayChangePercent,
+          isLoss: currentPrice < holding.averagePrice
+        };
+      } catch (err) {
+        console.error(`Error fetching data for ${symbol}:`, err.message);
+        const demo = demoStockData[symbol] || { price: holding.averagePrice, dayChangePercent: 0 };
+        return {
+          symbol,
+          companyName: symbol,
+          quantity: holding.quantity,
+          averagePrice: holding.averagePrice,
+          currentPrice: demo.price,
+          netChange: (demo.price - holding.averagePrice) * holding.quantity,
+          dayChangePercent: demo.dayChangePercent,
+          isLoss: demo.price < holding.averagePrice
+        };
+      }
+    }));
+    res.json(positions.filter(pos => pos !== null));
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Create a new order (buy/sell) and update holdings simulation for authenticated user
-app.post("/api/newOrder", authenticateToken, async (req, res) => {
+// ---------- New Order Endpoint (Buy/Sell with Live Price and Fallback) ----------
+app.post('/api/newOrder', authenticateToken, async (req, res) => {
   try {
-    const { symbol, qty, price, mode } = req.body;
-    
-    // Validate request body
-    if (!symbol || !qty || !price || !mode) {
+    const { symbol, qty, mode } = req.body;
+    if (!symbol || !qty || !mode) {
       return res.status(400).json({ message: 'Missing order parameters' });
     }
     if (!['buy', 'sell'].includes(mode)) {
       return res.status(400).json({ message: 'Invalid order mode' });
     }
     const quantity = Number(qty);
-    const orderPrice = Number(price);
-    if (isNaN(quantity) || isNaN(orderPrice)) {
-      return res.status(400).json({ message: 'Invalid quantity or price' });
+    if (isNaN(quantity)) {
+      return res.status(400).json({ message: 'Invalid quantity' });
     }
-
-    // Retrieve user details
+    const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+    const stockUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}.NS&apikey=${apiKey}`;
+    let currentPrice;
+    try {
+      const stockResponse = await axios.get(stockUrl);
+      const data = stockResponse.data["Global Quote"];
+      if (!data || !data["05. price"]) {
+        console.error(`Error fetching price for ${symbol}:`, data);
+        // Use demo fallback if live data not available
+        currentPrice = (demoStockData[symbol] && demoStockData[symbol].price) || 0;
+      } else {
+        currentPrice = parseFloat(data["05. price"]);
+      }
+    } catch (err) {
+      console.error(`Error fetching price for ${symbol}:`, err.message);
+      currentPrice = (demoStockData[symbol] && demoStockData[symbol].price) || 0;
+    }
+    if (isNaN(currentPrice) || currentPrice === 0) {
+      return res.status(400).json({ message: 'Unable to fetch valid stock price' });
+    }
     const user = await User.findById(req.user.id);
     if (!user) return res.status(400).json({ message: 'User not found' });
-
     if (mode === 'buy') {
-      const cost = quantity * orderPrice;
-      // Check if user has enough balance
+      const cost = quantity * currentPrice;
       if (user.balance < cost) {
         return res.status(400).json({ message: 'Insufficient funds' });
       }
-      // Update or create the holding
       let holding = await HoldingsModel.findOne({ userId: req.user.id, symbol });
       if (holding) {
-        // Recalculate average price and update quantity
         const totalCost = holding.quantity * holding.averagePrice + cost;
         const newQuantity = holding.quantity + quantity;
-        const newAvgPrice = totalCost / newQuantity;
         holding.quantity = newQuantity;
-        holding.averagePrice = newAvgPrice;
+        holding.averagePrice = totalCost / newQuantity;
         await holding.save();
       } else {
         holding = new HoldingsModel({
           userId: req.user.id,
           symbol,
-          quantity: quantity,
-          averagePrice: orderPrice
+          quantity,
+          averagePrice: currentPrice
         });
         await holding.save();
       }
-      // Deduct the cost from user's balance
       user.balance -= cost;
       await user.save();
     } else if (mode === 'sell') {
-      // Find the user's holding
       let holding = await HoldingsModel.findOne({ userId: req.user.id, symbol });
       if (!holding || holding.quantity < quantity) {
         return res.status(400).json({ message: 'Insufficient holdings to sell' });
       }
-      // Calculate proceeds and update holding
-      const proceeds = quantity * orderPrice;
+      const proceeds = quantity * currentPrice;
       holding.quantity -= quantity;
       if (holding.quantity === 0) {
         await HoldingsModel.deleteOne({ _id: holding._id });
       } else {
         await holding.save();
       }
-      // Add the proceeds to user's balance
       user.balance += proceeds;
       await user.save();
     }
-
-    // Create and save the order record
     const newOrder = new OrdersModel({
       userId: req.user.id,
       symbol,
       qty: quantity,
-      price: orderPrice,
+      price: currentPrice,
       mode,
     });
     await newOrder.save();
-
-    res.json({ message: "Order processed successfully" });
+    res.json({ message: "Order processed successfully", currentPrice });
   } catch (error) {
     console.error("Error processing order:", error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Simulated stock trends endpoint with dynamic data generation for real-time dashboards
+// ---------- Stock Trends Endpoint (with Fallback) ----------
 app.get('/api/stock-trends', async (req, res) => {
   try {
-    let trends = [
-      { symbol: "AAPL", currentPrice: 150, volume: 20000 },
-      { symbol: "GOOGL", currentPrice: 2800, volume: 15000 },
-      { symbol: "MSFT", currentPrice: 300, volume: 25000 },
-      { symbol: "AMZN", currentPrice: 3500, volume: 12000 },
-      { symbol: "TSLA", currentPrice: 700, volume: 30000 }
-    ];
-
-    // Simulate random fluctuations for price and volume
-    trends = trends.map(stock => {
-      const priceFluctuationPercent = (Math.random() - 0.5) * 0.1; // +/-5%
-      const newPrice = stock.currentPrice * (1 + priceFluctuationPercent);
-      const volumeFluctuationPercent = (Math.random() - 0.5) * 0.2; // +/-10%
-      const newVolume = stock.volume * (1 + volumeFluctuationPercent);
-      return {
-        symbol: stock.symbol,
-        currentPrice: parseFloat(newPrice.toFixed(2)),
-        volume: Math.round(newVolume)
-      };
-    });
-
+    const symbols = ["RELIANCE", "TCS", "INFY", "HDFC", "ICICIBANK"];
+    const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+    const trendData = await Promise.all(symbols.map(async (symbol) => {
+      if (!symbol || symbol.trim() === "") {
+        console.error(`Empty symbol in trend data`);
+        return null;
+      }
+      const stockUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}.NS&apikey=${apiKey}`;
+      try {
+        const stockResponse = await axios.get(stockUrl);
+        const data = stockResponse.data["Global Quote"];
+        if (!data || !data["05. price"]) {
+          console.error(`Error fetching data for ${symbol}:`, data);
+          const demo = demoStockData[symbol] || { price: 0, volume: 0, dayChangePercent: 0 };
+          return { symbol, currentPrice: demo.price, volume: demo.volume, dayChangePercent: demo.dayChangePercent };
+        }
+        const currentPrice = parseFloat(data["05. price"]);
+        const volume = parseInt(data["06. volume"]) || 0;
+        const changePercentStr = data["10. change percent"];
+        const dayChangePercent = changePercentStr ? parseFloat(changePercentStr.replace('%', '')) : 0;
+        return { symbol, currentPrice, volume, dayChangePercent };
+      } catch (err) {
+        console.error(`Error fetching data for ${symbol}:`, err.message);
+        const demo = demoStockData[symbol] || { price: 0, volume: 0, dayChangePercent: 0 };
+        return { symbol, currentPrice: demo.price, volume: demo.volume, dayChangePercent: demo.dayChangePercent };
+      }
+    }));
+    const trends = trendData.filter(item => item !== null);
     res.json(trends);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Aggregated trading summary endpoint for charts (bar graphs/histograms)
+// ---------- Trading Summary Endpoint ----------
 app.get('/api/trading-summary', authenticateToken, async (req, res) => {
   try {
     const summary = await OrdersModel.aggregate([
@@ -233,10 +293,20 @@ app.get('/api/trading-summary', authenticateToken, async (req, res) => {
   }
 });
 
+// ---------- All Available Stocks Endpoint (Demo Data) ----------
+app.get('/api/all-stocks', (req, res) => {
+  // Return demo stock data keys as available stocks
+  res.json(Object.keys(demoStockData).map(symbol => ({
+    symbol,
+    ...demoStockData[symbol]
+  })));
+});
+
+// ---------- Start Server and Connect to MongoDB ----------
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
-   mongoose
-    .connect(url).then(()=>{
-      console.log("mongo connected")
-    });
+  mongoose
+    .connect(mongoURL)
+    .then(() => console.log("Connected to MongoDB"))
+    .catch((err) => console.error("MongoDB connection error:", err));
 });

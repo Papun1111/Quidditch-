@@ -3,7 +3,7 @@ import axios from 'axios';
 import { AuthContext } from './AuthContext';
 
 interface Position {
-  _id: string;
+  _id?: string;
   symbol: string;
   companyName: string;
   quantity: number;
@@ -49,14 +49,14 @@ const Positions: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {positions.map((position) => (
-            <tr key={position._id}>
+          {positions.map((position, index) => (
+            <tr key={index}>
               <td className="py-2 px-4 border">{position.symbol}</td>
               <td className="py-2 px-4 border">{position.companyName}</td>
               <td className="py-2 px-4 border">{position.quantity}</td>
               <td className="py-2 px-4 border">{position.averagePrice}</td>
               <td className="py-2 px-4 border">{position.currentPrice}</td>
-              <td className="py-2 px-4 border">{position.netChange}</td>
+              <td className="py-2 px-4 border">{position.netChange.toFixed(2)}</td>
               <td className="py-2 px-4 border">{position.dayChangePercent}%</td>
               <td className="py-2 px-4 border">{position.isLoss ? "Yes" : "No"}</td>
             </tr>

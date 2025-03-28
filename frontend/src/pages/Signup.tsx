@@ -1,9 +1,10 @@
-// src/pages/Signup.tsx
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../components/AuthContext';
 
 const Signup: React.FC = () => {
+  const { saveToken } = useContext(AuthContext);
   const navigate = useNavigate();
   const [username, setUsername] = useState<string>("");
   const [name, setName] = useState<string>("");
@@ -14,9 +15,10 @@ const Signup: React.FC = () => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      // Now sending username along with name, email, and password
-      await axios.post("http://localhost:3000/api/signup", { username, name, email, password });
-      navigate("/login");
+      const res = await axios.post("http://localhost:3000/api/signup", { username, name, email, password });
+      // Auto-login after signup: store token and navigate to dashboard
+      saveToken(res.data.token);
+      navigate("/dashboard");
     } catch (err: any) {
       setError(err.response?.data?.message || "Signup failed");
     }

@@ -6,19 +6,21 @@ const OrderForm: React.FC = () => {
   const { token } = useContext(AuthContext);
   const [symbol, setSymbol] = useState<string>("");
   const [qty, setQty] = useState<string>("");
-  const [price, setPrice] = useState<string>("");
   const [mode, setMode] = useState<string>("buy");
   const [message, setMessage] = useState<string>("");
+  const [fetchedPrice, setFetchedPrice] = useState<number | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      // Submit order without price – backend fetches live price.
       const res = await axios.post(
         "http://localhost:3000/api/newOrder",
-        { symbol, qty, price, mode },
+        { symbol, qty, mode },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMessage(res.data.message);
+      setMessage(`${res.data.message}. Current Price: ${res.data.currentPrice}`);
+      setFetchedPrice(res.data.currentPrice);
     } catch (err: any) {
       setMessage(err.response?.data?.message || "Order failed");
     }
@@ -36,6 +38,7 @@ const OrderForm: React.FC = () => {
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
             className="w-full p-2 border rounded"
+            placeholder="e.g., RELIANCE"
             required
           />
         </div>
@@ -45,16 +48,6 @@ const OrderForm: React.FC = () => {
             type="number"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
-            className="w-full p-2 border rounded"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block mb-1">Price</label>
-          <input
-            type="number"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
             className="w-full p-2 border rounded"
             required
           />
@@ -74,6 +67,11 @@ const OrderForm: React.FC = () => {
           Submit Order
         </button>
       </form>
+      {fetchedPrice !== null && (
+        <p className="mt-4">
+          Current Price for {symbol.toUpperCase()} is {fetchedPrice}
+        </p>
+      )}
     </div>
   );
 };
