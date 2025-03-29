@@ -1,6 +1,16 @@
 import React, { useState, useContext } from 'react';
 import { motion } from 'framer-motion';
-import { FaWallet, FaChartLine, FaPlus, FaChartArea, FaRegChartBar, FaUsers, FaSlidersH, FaShieldAlt, FaSignOutAlt, FaMoon, FaSun } from 'react-icons/fa';
+import { 
+  FaWallet, 
+  FaChartLine, 
+  FaPlus, 
+  FaChartArea, 
+  FaRegChartBar, 
+  FaUsers, 
+  FaSlidersH, 
+  FaShieldAlt, 
+  FaSignOutAlt 
+} from 'react-icons/fa';
 import Holdings from '../components/Holdings';
 import Positions from '../components/Positions';
 import OrderForm from '../components/OrderForm';
@@ -16,15 +26,10 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("holdings");
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [darkMode, setDarkMode] = useState<boolean>(false);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
-  };
-
-  const toggleDarkMode = () => {
-    setDarkMode(prev => !prev);
   };
 
   const renderTab = () => {
@@ -50,15 +55,11 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const containerClasses = darkMode
-    ? "min-h-screen bg-gradient-to-r from-gray-900 to-black text-white"
-    : "min-h-screen bg-gray-100 text-gray-800";
+  // Fixed container classes for a full-width dark theme
+  const containerClasses = "min-h-screen bg-gradient-to-r from-gray-800 to-black text-white";
+  const navClasses = "bg-gray-900 text-white p-4 flex flex-wrap justify-between items-center";
 
-  const navClasses = darkMode
-    ? "bg-gray-800 text-white p-4 flex flex-wrap justify-between items-center"
-    : "bg-blue-600 text-white p-4 flex flex-wrap justify-between items-center";
-
-  // Animation variants for buttons
+  // Framer Motion variants for button animations
   const buttonVariants = {
     hover: { scale: 1.1, transition: { duration: 0.2 } },
     tap: { scale: 0.95 }
@@ -75,22 +76,13 @@ const Dashboard: React.FC = () => {
         >
           <FaWallet className="mr-2" /> Quidditch Market Dashboard
         </motion.h1>
-        <div className="flex items-center gap-2">
-          <motion.button
-            variants={buttonVariants}
-            whileHover="hover"
-            whileTap="tap"
-            onClick={toggleDarkMode}
-            className="p-2 rounded bg-gray-700 hover:bg-gray-600 transition"
-          >
-            {darkMode ? <FaSun size={20} /> : <FaMoon size={20} />}
-          </motion.button>
+        <div className="flex flex-wrap gap-2 overflow-x-auto">
           <motion.button
             variants={buttonVariants}
             whileHover="hover"
             whileTap="tap"
             onClick={() => setActiveTab("holdings")}
-            className="p-2 rounded hover:bg-gray-500 transition"
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
             <FaWallet size={20} title="Holdings" />
           </motion.button>
@@ -99,7 +91,7 @@ const Dashboard: React.FC = () => {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setActiveTab("positions")}
-            className="p-2 rounded hover:bg-gray-500 transition"
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
             <FaChartLine size={20} title="Positions" />
           </motion.button>
@@ -108,7 +100,7 @@ const Dashboard: React.FC = () => {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setActiveTab("newOrder")}
-            className="p-2 rounded hover:bg-gray-500 transition"
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
             <FaPlus size={20} title="New Order" />
           </motion.button>
@@ -117,7 +109,7 @@ const Dashboard: React.FC = () => {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setActiveTab("stockTrends")}
-            className="p-2 rounded hover:bg-gray-500 transition"
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
             <FaChartArea size={20} title="Stock Trends" />
           </motion.button>
@@ -126,7 +118,7 @@ const Dashboard: React.FC = () => {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setActiveTab("tradingSummary")}
-            className="p-2 rounded hover:bg-gray-500 transition"
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
             <FaRegChartBar size={20} title="Trading Summary" />
           </motion.button>
@@ -135,7 +127,7 @@ const Dashboard: React.FC = () => {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setActiveTab("teamPerformance")}
-            className="p-2 rounded hover:bg-gray-500 transition"
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
             <FaUsers size={20} title="Team Performance" />
           </motion.button>
@@ -144,7 +136,7 @@ const Dashboard: React.FC = () => {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setActiveTab("optionChain")}
-            className="p-2 rounded hover:bg-gray-500 transition"
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
             <FaSlidersH size={20} title="Option Chain" />
           </motion.button>
@@ -153,7 +145,7 @@ const Dashboard: React.FC = () => {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setActiveTab("portfolioRisk")}
-            className="p-2 rounded hover:bg-gray-500 transition"
+            className="p-2 rounded hover:bg-gray-700 transition"
           >
             <FaShieldAlt size={20} title="Portfolio Risk" />
           </motion.button>
@@ -169,7 +161,7 @@ const Dashboard: React.FC = () => {
         </div>
       </nav>
       <motion.div
-        className="p-4"
+        className="p-4 w-full"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
