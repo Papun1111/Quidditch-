@@ -179,6 +179,8 @@ const PortfolioRisk: React.FC = () => {
         const res = await axios.get<PortfolioRiskResponse>('http://localhost:3000/api/portfolio-risk', {
           headers: { Authorization: `Bearer ${token}` },
         });
+        // Log the received data for debugging
+        console.log('Risk data received:', res.data);
         setRiskData(res.data);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Error fetching portfolio risk');
@@ -187,7 +189,8 @@ const PortfolioRisk: React.FC = () => {
     fetchRisk();
   }, [token]);
 
-  const data = {
+  // Prepare chart data only when riskData is available
+  const chartData = {
     labels: riskData?.trajectory.map((_, idx) => `T${idx + 1}`) || [],
     datasets: [
       {
@@ -220,81 +223,95 @@ const PortfolioRisk: React.FC = () => {
 
       {/* Portfolio Risk Content */}
       <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900">
-        <motion.h2
-          className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Portfolio Risk Analysis (Seeker Trajectory)
-        </motion.h2>
-
-        {/* Pills for toggling sections */}
-        <div className="flex flex-wrap justify-center gap-4 mb-6">
-          <motion.button
-            onClick={() => setShowRiskValue(prev => !prev)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`px-4 py-2 rounded-full border transition-colors duration-300 ${
-              showRiskValue
-                ? "bg-green-500 text-white border-green-500"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200"
-            }`}
-          >
-            Risk Value
-          </motion.button>
-          <motion.button
-            onClick={() => setShowTrajectory(prev => !prev)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`px-4 py-2 rounded-full border transition-colors duration-300 ${
-              showTrajectory
-                ? "bg-green-500 text-white border-green-500"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200"
-            }`}
-          >
-            Trajectory
-          </motion.button>
-        </div>
-
-        <AnimatePresence>
-          {showRiskValue && (
-            <motion.div
-              className="w-full max-w-2xl bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+        {error && (
+          <div className="mb-4 text-red-500">
+            {error}
+          </div>
+        )}
+        {/* Show loading if data is not yet available */}
+        {!riskData && !error ? (
+          <div className="mb-4 text-gray-600 dark:text-gray-300">
+            Loading portfolio risk data...
+          </div>
+        ) : (
+          <>
+            <motion.h2
+              className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <p className="text-center text-gray-700 dark:text-gray-300">
-                <strong>Current Portfolio Risk:</strong> {riskData?.portfolioRisk.toFixed(3)}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Portfolio Risk Analysis (Seeker Trajectory)
+            </motion.h2>
 
-        <AnimatePresence>
-          {showTrajectory && (
-            <motion.div
-              className="w-full max-w-2xl bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Line data={data} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            {/* Pills for toggling sections */}
+            <div className="flex flex-wrap justify-center gap-4 mb-6">
+              <motion.button
+                onClick={() => setShowRiskValue(prev => !prev)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`px-4 py-2 rounded-full border transition-colors duration-300 ${
+                  showRiskValue
+                    ? "bg-green-500 text-white border-green-500"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200"
+                }`}
+              >
+                Risk Value
+              </motion.button>
+              <motion.button
+                onClick={() => setShowTrajectory(prev => !prev)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`px-4 py-2 rounded-full border transition-colors duration-300 ${
+                  showTrajectory
+                    ? "bg-green-500 text-white border-green-500"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200"
+                }`}
+              >
+                Trajectory
+              </motion.button>
+            </div>
 
-        {!showRiskValue && !showTrajectory && (
-          <motion.p
-            className="text-center text-gray-600 dark:text-gray-400"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            Select an option to view portfolio risk details.
-          </motion.p>
+            <AnimatePresence>
+              {showRiskValue && riskData && (
+                <motion.div
+                  className="w-full max-w-2xl bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 mb-6"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <p className="text-center text-gray-700 dark:text-gray-300">
+                    <strong>Current Portfolio Risk:</strong> {riskData.portfolioRisk.toFixed(3)}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {showTrajectory && riskData && (
+                <motion.div
+                  className="w-full max-w-2xl bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Line data={chartData} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {(!showRiskValue && !showTrajectory) && (
+              <motion.p
+                className="text-center text-gray-600 dark:text-gray-400"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                Select an option to view portfolio risk details.
+              </motion.p>
+            )}
+          </>
         )}
       </div>
     </div>
