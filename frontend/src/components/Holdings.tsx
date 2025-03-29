@@ -35,7 +35,7 @@ const Holdings: React.FC = () => {
           <tr>
             <th className="py-2 px-4 border">Symbol</th>
             <th className="py-2 px-4 border">Quantity</th>
-            <th className="py-2 px-4 border">Average Price</th>
+            <th className="py-2 px-4 border">Avg. Price</th>
           </tr>
         </thead>
         <tbody>

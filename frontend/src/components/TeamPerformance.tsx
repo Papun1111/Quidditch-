@@ -36,15 +36,15 @@ const TeamPerformance: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {data.map((item, index) => (
-            <tr key={index}>
+          {data.map((item, idx) => (
+            <tr key={idx}>
               <td className="py-2 px-4 border">{item.team}</td>
               <td className="py-2 px-4 border">{item.symbol}</td>
               <td
                 className="py-2 px-4 border"
                 style={{ color: item.performance >= 0 ? 'green' : 'red' }}
               >
-                {item.performance}%
+                {item.performance.toFixed(2)}%
               </td>
             </tr>
           ))}

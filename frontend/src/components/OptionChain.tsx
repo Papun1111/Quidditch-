@@ -62,8 +62,8 @@ const OptionChain: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {optionChain.map((contract, index) => (
-              <tr key={index}>
+            {optionChain.map((contract, idx) => (
+              <tr key={idx}>
                 <td className="py-2 px-4 border">{contract.strike}</td>
                 <td className="py-2 px-4 border">{contract.expiry}</td>
                 <td className="py-2 px-4 border">{contract.premium}</td>

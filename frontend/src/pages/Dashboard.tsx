@@ -7,6 +7,7 @@ import TradingSummary from '../components/TradingSummary';
 import TeamPerformance from '../components/TeamPerformance';
 import OptionChain from '../components/OptionChain';
 import PortfolioRisk from '../components/PortfolioRisk';
+import VRTradingPit from '../components/VRTradingPit'; // New component
 import { AuthContext } from '../components/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,6 +39,8 @@ const Dashboard: React.FC = () => {
         return <OptionChain />;
       case "portfolioRisk":
         return <PortfolioRisk />;
+      case "vrTradingPit":
+        return <VRTradingPit />;
       default:
         return null;
     }
@@ -46,35 +49,18 @@ const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-blue-600 text-white p-4 flex flex-wrap justify-between items-center">
-        <h1 className="text-xl font-bold mb-2 md:mb-0">Quidditch Market Dashboard</h1>
+        <h1 className="text-xl font-bold mb-2 md:mb-0">Trading Dashboard</h1>
         <div className="flex flex-wrap gap-2">
-          <button className="hover:underline" onClick={() => setActiveTab("holdings")}>
-            Holdings
-          </button>
-          <button className="hover:underline" onClick={() => setActiveTab("positions")}>
-            Positions
-          </button>
-          <button className="hover:underline" onClick={() => setActiveTab("newOrder")}>
-            New Order
-          </button>
-          <button className="hover:underline" onClick={() => setActiveTab("stockTrends")}>
-            Stock Trends
-          </button>
-          <button className="hover:underline" onClick={() => setActiveTab("tradingSummary")}>
-            Trading Summary
-          </button>
-          <button className="hover:underline" onClick={() => setActiveTab("teamPerformance")}>
-            Team Performance
-          </button>
-          <button className="hover:underline" onClick={() => setActiveTab("optionChain")}>
-            Option Chain
-          </button>
-          <button className="hover:underline" onClick={() => setActiveTab("portfolioRisk")}>
-            Portfolio Risk
-          </button>
-          <button className="hover:underline" onClick={handleLogout}>
-            Logout
-          </button>
+          <button onClick={() => setActiveTab("holdings")} className="hover:underline">Holdings</button>
+          <button onClick={() => setActiveTab("positions")} className="hover:underline">Positions</button>
+          <button onClick={() => setActiveTab("newOrder")} className="hover:underline">New Order</button>
+          <button onClick={() => setActiveTab("stockTrends")} className="hover:underline">Stock Trends</button>
+          <button onClick={() => setActiveTab("tradingSummary")} className="hover:underline">Trading Summary</button>
+          <button onClick={() => setActiveTab("teamPerformance")} className="hover:underline">Team Performance</button>
+          <button onClick={() => setActiveTab("optionChain")} className="hover:underline">Option Chain</button>
+          <button onClick={() => setActiveTab("portfolioRisk")} className="hover:underline">Portfolio Risk</button>
+          <button onClick={() => setActiveTab("vrTradingPit")} className="hover:underline">VR Trading Pit</button>
+          <button onClick={handleLogout} className="hover:underline">Logout</button>
         </div>
       </nav>
       <div className="p-4">{renderTab()}</div>

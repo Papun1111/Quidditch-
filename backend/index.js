@@ -324,14 +324,21 @@ app.get('/api/team-performance', async (req, res) => {
 });
 
 // ---------- New Feature: Option Chain Endpoint (Bludger Attack Patterns) ----------
-app.get('/api/option-chain/:symbol', (req, res) => {
+app.get('/api/option-chain/:symbol', async (req, res) => {
   const { symbol } = req.params;
-  if (!symbol) {
-    return res.status(400).json({ message: 'Stock symbol required' });
+  if (!symbol) return res.status(400).json({ message: 'Stock symbol required' });
+  const data = await fetchStockData(symbol);
+  const effectiveData = data || demoStockData[symbol];
+  if (!effectiveData) {
+    return res.status(500).json({ message: `Data not available for ${symbol}` });
+  }
+  const basePrice = parseFloat(effectiveData.price);
+  if (isNaN(basePrice) || basePrice === 0) {
+    return res.status(400).json({ message: 'Invalid base price for option chain calculation' });
   }
   const optionChain = Array.from({ length: 5 }, (_, i) => {
-    const basePrice = demoStockData[symbol] ? demoStockData[symbol].price : 1000;
-    const strike = Math.round(basePrice + (Math.random() * 200 - 100));
+    const offset = Math.random() * 0.2 - 0.1; // ±10% offset
+    const strike = Math.round(basePrice * (1 + offset));
     const premium = parseFloat((Math.random() * 50 + 5).toFixed(2));
     const openInterest = Math.floor(Math.random() * 1000 + 100);
     const attackIntensity = parseFloat(((premium * openInterest) / 10000).toFixed(2));
@@ -345,7 +352,6 @@ app.get('/api/option-chain/:symbol', (req, res) => {
   });
   res.json({ symbol, optionChain });
 });
-
 // ---------- New Feature: Portfolio Risk Analysis Endpoint ----------
 app.get('/api/portfolio-risk', authenticateToken, async (req, res) => {
   try {
@@ -389,4 +395,3 @@ app.listen(PORT, () => {
     .then(() => console.log("Connected to MongoDB"))
     .catch((err) => console.error("MongoDB connection error:", err));
 });
-
