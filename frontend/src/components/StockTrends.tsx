@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Bar } from 'react-chartjs-2';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -22,12 +23,15 @@ interface StockTrend {
 
 const StockTrends: React.FC = () => {
   const [trends, setTrends] = useState<StockTrend[]>([]);
+  const [selectedSymbols, setSelectedSymbols] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchTrends = async () => {
       try {
         const res = await axios.get("http://localhost:3000/api/stock-trends");
         setTrends(res.data);
+        // Initially select all stocks
+        setSelectedSymbols(res.data.map((stock: StockTrend) => stock.symbol));
       } catch (err) {
         console.error(err);
       }
@@ -35,22 +39,122 @@ const StockTrends: React.FC = () => {
     fetchTrends();
   }, []);
 
+  // Toggle the visibility of a stock's data
+  const toggleSymbol = (symbol: string) => {
+    setSelectedSymbols((prev) => {
+      if (prev.includes(symbol)) {
+        return prev.filter((s) => s !== symbol);
+      } else {
+        return [...prev, symbol];
+      }
+    });
+  };
+
+  // Filter out trends that are deselected
+  const filteredTrends = trends.filter(stock => selectedSymbols.includes(stock.symbol));
+
+  // Chart data built from the filtered trends
   const data = {
-    labels: trends.map(stock => stock.symbol),
+    labels: filteredTrends.map(stock => stock.symbol),
     datasets: [
       {
         label: "Current Price",
-        data: trends.map(stock => stock.currentPrice),
+        data: filteredTrends.map(stock => stock.currentPrice),
         backgroundColor: "rgba(75, 192, 192, 0.6)",
       },
     ],
   };
 
+  // Variants for Framer Motion animations
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  };
+
+  const pillVariants = {
+    hidden: { opacity: 0, scale: 0.8 },
+    visible: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.8 },
+  };
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Stock Trends</h2>
-      <Bar data={data} />
-    </div>
+    <motion.div 
+      className="min-h-screen bg-gradient-to-r from-blue-50 to-purple-50 p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="container mx-auto">
+        <motion.h2 
+          className="text-3xl font-bold text-gray-800 text-center mb-8"
+          initial={{ y: -20 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          Stock Trends
+        </motion.h2>
+
+        {/* Pills for toggling stock visibility */}
+        <motion.div 
+          className="flex flex-wrap justify-center gap-4 mb-8"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {trends.map((stock) => {
+            const isSelected = selectedSymbols.includes(stock.symbol);
+            return (
+              <motion.button
+                key={stock.symbol}
+                variants={pillVariants}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => toggleSymbol(stock.symbol)}
+                className={`px-4 py-2 rounded-full border transition-colors duration-300 ${
+                  isSelected 
+                    ? "bg-green-500 text-white border-green-500" 
+                    : "bg-gray-200 text-gray-800 border-gray-200"
+                }`}
+              >
+                {stock.symbol}
+              </motion.button>
+            );
+          })}
+        </motion.div>
+
+        {/* Chart container with animated transitions */}
+        <motion.div
+          className="bg-white rounded-lg shadow-lg p-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <AnimatePresence exitBeforeEnter>
+            {filteredTrends.length > 0 ? (
+              <motion.div
+                key={filteredTrends.map(s => s.symbol).join("-")}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Bar data={data} />
+              </motion.div>
+            ) : (
+              <motion.p
+                key="no-data"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-center text-gray-600"
+              >
+                No stocks selected.
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    </motion.div>
   );
 };
 

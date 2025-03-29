@@ -1,5 +1,228 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaUsers, FaChartLine } from 'react-icons/fa';
+
+//
+// ─── DECRYPTED TEXT COMPONENT ────────────────────────────────────────────────
+//
+
+interface DecryptedTextProps {
+  text: string;
+  speed?: number;
+  maxIterations?: number;
+  sequential?: boolean;
+  revealDirection?: 'start' | 'end' | 'center';
+  useOriginalCharsOnly?: boolean;
+  characters?: string;
+  className?: string;
+  encryptedClassName?: string;
+  parentClassName?: string;
+  animateOn?: 'view' | 'hover';
+  [key: string]: any;
+}
+
+function DecryptedText({
+  text,
+  speed = 100, // Increased duration for a longer effect
+  maxIterations = 20,
+  sequential = false,
+  revealDirection = 'start',
+  useOriginalCharsOnly = false,
+  characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+',
+  className = '',
+  parentClassName = '',
+  encryptedClassName = '',
+  animateOn = 'hover',
+  ...props
+}: DecryptedTextProps) {
+  const [displayText, setDisplayText] = useState<string>(text);
+  const [isHovering, setIsHovering] = useState<boolean>(false);
+  const [isScrambling, setIsScrambling] = useState<boolean>(false);
+  const [revealedIndices, setRevealedIndices] = useState<Set<number>>(new Set());
+  const [hasAnimated, setHasAnimated] = useState<boolean>(false);
+  const containerRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    let interval: number;
+    let currentIteration = 0;
+
+    const getNextIndex = (revealedSet: Set<number>): number => {
+      const textLength = text.length;
+      switch (revealDirection) {
+        case 'start':
+          return revealedSet.size;
+        case 'end':
+          return textLength - 1 - revealedSet.size;
+        case 'center': {
+          const middle = Math.floor(textLength / 2);
+          const offset = Math.floor(revealedSet.size / 2);
+          const nextIndex =
+            revealedSet.size % 2 === 0 ? middle + offset : middle - offset - 1;
+          if (nextIndex >= 0 && nextIndex < textLength && !revealedSet.has(nextIndex)) {
+            return nextIndex;
+          }
+          for (let i = 0; i < textLength; i++) {
+            if (!revealedSet.has(i)) return i;
+          }
+          return 0;
+        }
+        default:
+          return revealedSet.size;
+      }
+    };
+
+    const availableChars = useOriginalCharsOnly
+      ? Array.from(new Set(text.split(''))).filter((char) => char !== ' ')
+      : characters.split('');
+
+    const shuffleText = (originalText: string, currentRevealed: Set<number>): string => {
+      if (useOriginalCharsOnly) {
+        const positions = originalText.split('').map((char, i) => ({
+          char,
+          isSpace: char === ' ',
+          index: i,
+          isRevealed: currentRevealed.has(i),
+        }));
+        const nonSpaceChars = positions
+          .filter((p) => !p.isSpace && !p.isRevealed)
+          .map((p) => p.char);
+        for (let i = nonSpaceChars.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [nonSpaceChars[i], nonSpaceChars[j]] = [nonSpaceChars[j], nonSpaceChars[i]];
+        }
+        let charIndex = 0;
+        return positions
+          .map((p) => {
+            if (p.isSpace) return ' ';
+            if (p.isRevealed) return originalText[p.index];
+            return nonSpaceChars[charIndex++];
+          })
+          .join('');
+      } else {
+        return originalText
+          .split('')
+          .map((char, i) => {
+            if (char === ' ') return ' ';
+            if (currentRevealed.has(i)) return originalText[i];
+            return availableChars[Math.floor(Math.random() * availableChars.length)];
+          })
+          .join('');
+      }
+    };
+
+    if (isHovering) {
+      setIsScrambling(true);
+      interval = window.setInterval(() => {
+        setRevealedIndices((prevRevealed) => {
+          if (sequential) {
+            if (prevRevealed.size < text.length) {
+              const nextIndex = getNextIndex(prevRevealed);
+              const newRevealed = new Set(prevRevealed);
+              newRevealed.add(nextIndex);
+              setDisplayText(shuffleText(text, newRevealed));
+              return newRevealed;
+            } else {
+              clearInterval(interval);
+              setIsScrambling(false);
+              return prevRevealed;
+            }
+          } else {
+            setDisplayText(shuffleText(text, prevRevealed));
+            currentIteration++;
+            if (currentIteration >= maxIterations) {
+              clearInterval(interval);
+              setIsScrambling(false);
+              setDisplayText(text);
+            }
+            return prevRevealed;
+          }
+        });
+      }, speed);
+    } else {
+      setDisplayText(text);
+      setRevealedIndices(new Set());
+      setIsScrambling(false);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [
+    isHovering,
+    text,
+    speed,
+    maxIterations,
+    sequential,
+    revealDirection,
+    characters,
+    useOriginalCharsOnly,
+  ]);
+
+  useEffect(() => {
+    if (animateOn !== 'view') return;
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setIsHovering(true);
+          setHasAnimated(true);
+        }
+      });
+    };
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1,
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    const currentRef = containerRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) observer.unobserve(currentRef);
+    };
+  }, [animateOn, hasAnimated]);
+
+  const hoverProps =
+    animateOn === 'hover'
+      ? {
+          onMouseEnter: () => setIsHovering(true),
+          onMouseLeave: () => setIsHovering(false),
+        }
+      : {};
+
+  return (
+    <motion.span
+      ref={containerRef}
+      className={`inline-block whitespace-pre-wrap ${parentClassName}`}
+      {...hoverProps}
+      {...props}
+    >
+      <span className="sr-only">{displayText}</span>
+      <span aria-hidden="true">
+        {displayText.split('').map((char, index) => {
+          const isRevealedOrDone = revealedIndices.has(index) || !isScrambling || !isHovering;
+          return (
+            <span
+              key={index}
+              className={isRevealedOrDone ? className : encryptedClassName}
+            >
+              {char}
+            </span>
+          );
+        })}
+      </span>
+    </motion.span>
+  );
+}
+
+//
+// ─── TEAM PERFORMANCE COMPONENT ──────────────────────────────────────────────
+//
 
 interface TeamPerformance {
   team: string;
@@ -7,7 +230,15 @@ interface TeamPerformance {
   performance: number;
 }
 
-const TeamPerformance: React.FC = () => {
+// Helper to compute a unique gradient for each team based on its index.
+const getTeamGradient = (index: number) => {
+  const hue = (index * 137) % 360; // Golden angle approximation for distinct hues
+  return {
+    background: `linear-gradient(90deg, hsl(${hue}, 70%, 60%), hsl(${(hue + 30) % 360}, 70%, 60%))`,
+  };
+};
+
+const TeamPerformanceComponent: React.FC = () => {
   const [data, setData] = useState<TeamPerformance[]>([]);
   const [error, setError] = useState<string>('');
 
@@ -23,35 +254,89 @@ const TeamPerformance: React.FC = () => {
     fetchPerformance();
   }, []);
 
+  // Framer Motion variants for table rows
+  const rowVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0 },
+  };
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Team Performance</h2>
-      {error && <p className="text-red-500">{error}</p>}
-      <table className="min-w-full bg-white shadow rounded">
-        <thead>
-          <tr>
-            <th className="py-2 px-4 border">Team</th>
-            <th className="py-2 px-4 border">Symbol</th>
-            <th className="py-2 px-4 border">Performance (%)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((item, idx) => (
-            <tr key={idx}>
-              <td className="py-2 px-4 border">{item.team}</td>
-              <td className="py-2 px-4 border">{item.symbol}</td>
-              <td
-                className="py-2 px-4 border"
-                style={{ color: item.performance >= 0 ? 'green' : 'red' }}
-              >
-                {item.performance.toFixed(2)}%
-              </td>
+    <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:bg-gradient-to-r dark:from-gray-800 dark:to-gray-900 min-h-screen">
+      <motion.h2
+        className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-white"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <FaUsers className="inline-block mr-2" /> Team Performance
+      </motion.h2>
+      {error && (
+        <motion.p
+          className="text-red-500 text-center mb-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          {error}
+        </motion.p>
+      )}
+      <div className="overflow-x-auto">
+        <motion.table
+          className="min-w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg"
+          initial="hidden"
+          animate="visible"
+        >
+          <thead>
+            <tr>
+              <th className="py-3 px-4 border-b border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">
+                Team
+              </th>
+              <th className="py-3 px-4 border-b border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">
+                Symbol
+              </th>
+              <th className="py-3 px-4 border-b border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white">
+                Performance (%) <FaChartLine className="inline-block ml-1" />
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <AnimatePresence>
+            <motion.tbody>
+              {data.map((item, idx) => (
+                <motion.tr
+                  key={idx}
+                  variants={rowVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0 }}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <td className="py-3 px-4 border-t border-gray-200 dark:border-gray-600">
+                    <div style={getTeamGradient(idx)} className="p-2 rounded flex items-center">
+                      <DecryptedText
+                        text={item.team}
+                        animateOn="view"
+                        speed={100}
+                        maxIterations={20}
+                        className="text-white font-bold"
+                      />
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 border-t border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300">
+                    {item.symbol}
+                  </td>
+                  <td
+                    className="py-3 px-4 border-t border-gray-200 dark:border-gray-600"
+                    style={{ color: item.performance >= 0 ? 'green' : 'red' }}
+                  >
+                    {item.performance.toFixed(2)}%
+                  </td>
+                </motion.tr>
+              ))}
+            </motion.tbody>
+          </AnimatePresence>
+        </motion.table>
+      </div>
     </div>
   );
 };
 
-export default TeamPerformance;
+export default TeamPerformanceComponent;
