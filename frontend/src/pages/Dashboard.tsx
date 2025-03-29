@@ -1,28 +1,20 @@
-import React, { useRef, useEffect, useState, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import {
-  FaWallet,
-  FaSignOutAlt,
-  FaBars,
-} from "react-icons/fa";
+import { FaWallet, FaSignOutAlt, FaBars, FaAngleDoubleLeft, FaAngleDoubleRight } from "react-icons/fa";
 
-// --- Import or define these components in your project ---
 import Holdings from "../components/Holdings";
 import Positions from "../components/Positions";
 import OrderForm from "../components/OrderForm";
 import StockTrends from "../components/StockTrends";
-// Removed TradingSummary import
+// TradingSummary import removed
 import TeamPerformance from "../components/TeamPerformance";
 import OptionChain from "../components/OptionChain";
 import PortfolioRisk from "../components/PortfolioRisk";
-import { AuthContext } from "../components/AuthContext";
 import VRTradingPit from "../components/VRTradingPit";
+import { AuthContext } from "../components/AuthContext";
 
-// ============================================================================
-// GOOEYNAV COMPONENT (INLINED)
-// ============================================================================
-
+// ---------------- GooeyNav (Sidebar variant) ----------------
 interface GooeyNavItem {
   label: string;
   href: string;
@@ -57,22 +49,12 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
 
   const noise = (n = 1) => n / 2 - Math.random() * n;
 
-  const getXY = (
-    distance: number,
-    pointIndex: number,
-    totalPoints: number
-  ): [number, number] => {
-    const angle =
-      ((360 + noise(8)) / totalPoints) * pointIndex * (Math.PI / 180);
+  const getXY = (distance: number, pointIndex: number, totalPoints: number): [number, number] => {
+    const angle = ((360 + noise(8)) / totalPoints) * pointIndex * (Math.PI / 180);
     return [distance * Math.cos(angle), distance * Math.sin(angle)];
   };
 
-  const createParticle = (
-    i: number,
-    t: number,
-    d: [number, number],
-    r: number
-  ) => {
+  const createParticle = (i: number, t: number, d: [number, number], r: number) => {
     let rotate = noise(r / 10);
     return {
       start: getXY(d[0], particleCount - i, particleCount),
@@ -155,10 +137,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     }
   };
 
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLAnchorElement>,
-    index: number
-  ) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       const liEl = e.currentTarget.parentElement;
@@ -183,12 +162,10 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     });
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
-    // eslint-disable-next-line
   }, [activeIndex]);
 
   return (
     <>
-      {/* Style tag needed to preserve GooeyNav animations */}
       <style>
         {`
           :root {
@@ -329,12 +306,12 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
       </style>
       <div className="relative" ref={containerRef}>
         <nav
-          className="flex relative"
+          className="flex flex-col gap-4 relative"
           style={{ transform: "translate3d(0,0,0.01px)" }}
         >
           <ul
             ref={navRef}
-            className="flex gap-8 list-none p-0 px-4 m-0 relative z-[3]"
+            className="flex flex-col gap-4 list-none p-0 m-0 relative z-[3]"
             style={{
               color: "white",
               textShadow: "0 1px 1px hsl(205deg 30% 10% / 0.2)",
@@ -343,8 +320,8 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
             {items.map((item, index) => (
               <li
                 key={index}
-                className={`py-[0.6em] px-[1em] rounded-full relative cursor-pointer transition-[background-color_color_box-shadow] duration-300 ease shadow-[0_0_0.5px_1.5px_transparent] text-white ${
-                  activeIndex === index ? "active" : ""
+                className={`py-2 px-4 rounded relative cursor-pointer transition duration-300 ease hover:bg-gray-700 ${
+                  activeIndex === index ? "bg-gray-800" : ""
                 }`}
                 onClick={(e) => handleClick(e, index)}
               >
@@ -366,33 +343,28 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
   );
 };
 
-// ============================================================================
-// DASHBOARD COMPONENT
-// ============================================================================
+// ---------------- Sidebar Dashboard Component ----------------
 
 const Dashboard: React.FC = () => {
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // For controlling which tab is currently active
   const [activeTab, setActiveTab] = useState<string>("holdings");
-  // For mobile menu toggle state
-  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
-  // GooeyNav items: each label references a hash, e.g., "#holdings"
+  // Navigation items for sidebar
   const navItems: GooeyNavItem[] = [
     { label: "Holdings", href: "#holdings" },
     { label: "Positions", href: "#positions" },
     { label: "New Order", href: "#newOrder" },
     { label: "Stock Trends", href: "#stockTrends" },
-    // Removed Trading Summary
     { label: "Team Performance", href: "#teamPerformance" },
     { label: "Option Chain", href: "#optionChain" },
     { label: "Portfolio Risk", href: "#portfolioRisk" },
     { label: "VR Trading Pit", href: "#vrtradingpt" },
   ];
 
-  // Listen for hash changes and update the active tab accordingly
+  // Listen for hash changes to update active tab
   useEffect(() => {
     const updateActiveTab = () => {
       const hash = window.location.hash;
@@ -401,7 +373,7 @@ const Dashboard: React.FC = () => {
       }
     };
     window.addEventListener("hashchange", updateActiveTab);
-    updateActiveTab(); // Immediately run on mount
+    updateActiveTab();
     return () => window.removeEventListener("hashchange", updateActiveTab);
   }, []);
 
@@ -410,7 +382,6 @@ const Dashboard: React.FC = () => {
     navigate("/login");
   };
 
-  // Render the appropriate tab content
   const renderTab = () => {
     switch (activeTab) {
       case "holdings":
@@ -421,7 +392,6 @@ const Dashboard: React.FC = () => {
         return <OrderForm />;
       case "stockTrends":
         return <StockTrends />;
-      // Removed tradingSummary case
       case "teamPerformance":
         return <TeamPerformance />;
       case "optionChain":
@@ -436,67 +406,40 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-gray-800 to-black text-white w-full">
-      <nav className="bg-gray-900 p-4 flex flex-col md:flex-row md:items-center md:justify-between">
+    <div className="flex min-h-screen bg-gradient-to-r from-gray-800 to-black text-white">
+      {/* Sidebar */}
+      <motion.div
+        className={`bg-gray-900 p-4 flex flex-col transition-all duration-300 ${
+          isSidebarOpen ? "w-64" : "w-16"
+        }`}
+      >
         <div className="flex items-center justify-between">
-          <motion.h1
-            className="text-xl font-bold flex items-center"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <FaWallet className="mr-2" /> Quidditch Market Dashboard
-          </motion.h1>
-          {/* Mobile toggle button */}
+          {isSidebarOpen && (
+            <h1 className="text-xl font-bold flex items-center">
+              <FaWallet className="mr-2" /> Quidditch Dashboard
+            </h1>
+          )}
           <button
-            className="md:hidden text-white focus:outline-none"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="text-white focus:outline-none"
           >
-            <FaBars size={24} />
+            {isSidebarOpen ? <FaAngleDoubleLeft size={20} /> : <FaAngleDoubleRight size={20} />}
           </button>
         </div>
-        <div className="mt-4 md:mt-0 flex flex-col md:flex-row md:items-center md:gap-4">
-          {/* Desktop GooeyNav */}
-          <div className="hidden md:block">
-            <GooeyNav items={navItems} initialActiveIndex={0} />
-          </div>
-          {/* Mobile dropdown menu */}
-          {isMenuOpen && (
-            <div className="block md:hidden">
-              <ul className="flex flex-col space-y-2">
-                {navItems.map((item, index) => (
-                  <li key={index}>
-                    <a
-                      href={item.href}
-                      onClick={() => setIsMenuOpen(false)}
-                      className="block p-2 rounded hover:bg-gray-700"
-                    >
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <motion.button
-            onClick={handleLogout}
-            className="p-2 rounded hover:bg-red-600 transition"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <FaSignOutAlt size={20} title="Logout" />
-          </motion.button>
+        <div className="mt-6">
+          <GooeyNav items={navItems} initialActiveIndex={0} />
         </div>
-      </nav>
-      <motion.div
-        className="p-4 w-full"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
-      >
-        {renderTab()}
+        <button
+          onClick={handleLogout}
+          className="mt-auto p-2 rounded hover:bg-red-600 transition"
+        >
+          <FaSignOutAlt size={20} title="Logout" />
+        </button>
       </motion.div>
+      {/* Main Content */}
+      <div className="flex-1 p-4">
+        {renderTab()}
+      </div>
     </div>
   );
 };
