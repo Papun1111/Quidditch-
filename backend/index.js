@@ -255,45 +255,40 @@ app.get('/api/holdings', authenticateToken, async (req, res) => {
 app.get('/api/positions', authenticateToken, async (req, res) => {
   try {
     const holdings = await HoldingsModel.find({ userId: req.user.id });
-    const positions = await Promise.all(
-      holdings.map(async (holding) => {
-        const symbol = holding.symbol;
-        if (!symbol || symbol.trim() === "") {
-          console.error(`Empty symbol for holding:`, holding);
-          return null;
-        }
-        // Attempt to fetch live data
-        let data = await fetchStockData(symbol);
-        // If live data fails, fall back to mock data
-        if (!data) {
-          console.warn(`Falling back to mock data for ${symbol}`);
-          data = getMockStockData(symbol);
-        }
-        if (!data) {
-          console.error(`No data available for ${symbol}`);
-          return null;
-        }
-        const currentPrice = parseFloat(data.price);
-        const dayChangePercent = parseFloat(data.percent_change);
-        return {
-          symbol,
-          companyName: symbol, 
-          quantity: holding.quantity,
-          averagePrice: holding.averagePrice,
-          currentPrice,
-          netChange: (currentPrice - holding.averagePrice) * holding.quantity,
-          dayChangePercent,
-          isLoss: currentPrice < holding.averagePrice,
-        };
-      })
-    );
-    res.json(positions.filter((pos) => pos !== null));
+    const positions = await Promise.all(holdings.map(async (holding) => {
+      const symbol = holding.symbol;
+      if (!symbol || symbol.trim() === "") {
+        console.error(`Empty symbol for holding:`, holding);
+        return null;
+      }
+      
+      const data = await fetchStockData(symbol);
+      if (!data) {
+        console.error(`Could not fetch any data for ${symbol}`);
+        return null;
+      }
+      
+      const currentPrice = parseFloat(data.price);
+      const dayChangePercent = parseFloat(data.percent_change);
+      
+      return {
+        symbol,
+        companyName: symbol,
+        quantity: holding.quantity,
+        averagePrice: holding.averagePrice,
+        currentPrice,
+        netChange: (currentPrice - holding.averagePrice) * holding.quantity,
+        dayChangePercent,
+        isLoss: currentPrice < holding.averagePrice
+      };
+    }));
+    
+    res.json(positions.filter(pos => pos !== null));
   } catch (error) {
-    console.error("Positions Error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error('Positions Error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
-
 /* ----------------------------------------------------------------------------
    New Order Endpoint
 ----------------------------------------------------------------------------- */
@@ -580,42 +575,33 @@ app.get('/api/portfolio-risk', authenticateToken, async (req, res) => {
 
     let totalValue = 0;
     let weightedRiskSum = 0;
-
+    
     for (const holding of holdings) {
       const symbol = holding.symbol;
       if (!symbol || symbol.trim() === "") continue;
-
-      // Try fetching live stock data
-      let stockData = await fetchStockData(symbol);
-      // Fallback to demo data if live data not available
-      if (!stockData) {
-        stockData = demoStockData[symbol] || { price: holding.averagePrice, volume: 1000000, percent_change: 0 };
-      }
-
-      const currentPrice = parseFloat(stockData.price);
-      if (isNaN(currentPrice) || currentPrice <= 0) continue;
-
+      
+      const data = await fetchStockData(symbol);
+      if (!data) continue;
+      
+      const currentPrice = parseFloat(data.price);
       const holdingValue = holding.quantity * currentPrice;
+      
       totalValue += holdingValue;
-
-      // Use percent_change as risk indicator (absolute value)
-      const riskIndicator = Math.abs(parseFloat(stockData.percent_change));
-      // Fallback risk factor if not defined
+      
       const riskFactor = riskFactors[symbol] || 0.5;
-
-      weightedRiskSum += riskIndicator * riskFactor * holdingValue;
+      weightedRiskSum += riskFactor * holdingValue;
     }
-
+    
     const baselineRisk = totalValue > 0 ? weightedRiskSum / totalValue : 0;
-    // Create a dummy trajectory with slight random changes
+
     const trajectory = [parseFloat(baselineRisk.toFixed(3))];
     for (let i = 1; i < 10; i++) {
       const change = (Math.random() - 0.5) * 0.1;
       trajectory.push(parseFloat((trajectory[i - 1] + change).toFixed(3)));
     }
-
-    res.json({
-      portfolioRisk: parseFloat(baselineRisk.toFixed(3)),
+    
+    res.json({ 
+      portfolioRisk: parseFloat(baselineRisk.toFixed(3)), 
       trajectory,
       totalValue: parseFloat(totalValue.toFixed(2))
     });
