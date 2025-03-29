@@ -8,7 +8,9 @@ import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
-import NodeCache from 'node-cache'; // npm install node-cache
+import NodeCache from 'node-cache';
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 import { User } from './model/userModels.js';
 import { OrdersModel } from './model/OrdersModel.js';
@@ -17,25 +19,22 @@ import { HoldingsModel } from './model/HoldingsModel.js';
 const PORT = process.env.PORT || 3000;
 const mongoURL = process.env.MONGO_URL;
 
-// Cache for stock data to reduce API calls
-const stockCache = new NodeCache({ stdTTL: 300 }); // 5 minute TTL
+// Cache for stock data to reduce API calls (TTL = 5 minutes)
+const stockCache = new NodeCache({ stdTTL: 300 });
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
 /* ----------------------------------------------------------------------------
-   Expanded Demo Data & Historical Data & Risk Factors
+   Expanded Demo Data, Historical Data & Risk Factors
 ----------------------------------------------------------------------------- */
-// You can adjust these values as needed.
 const demoStockData = {
-  // Original Indian stocks (if needed)
   "RELIANCE": { price: 2400, volume: 20000, percent_change: 0.5 },
   "TCS": { price: 3500, volume: 15000, percent_change: 0.7 },
   "INFY": { price: 1500, volume: 25000, percent_change: -0.3 },
   "HDFC": { price: 3000, volume: 12000, percent_change: 0.2 },
   "ICICIBANK": { price: 650, volume: 30000, percent_change: -0.1 },
-  // U.S. companies and others
   "IBM": { price: 130, volume: 3000000, percent_change: 0.5 },
   "AAPL": { price: 150, volume: 5000000, percent_change: 0.7 },
   "MSFT": { price: 280, volume: 2000000, percent_change: -0.3 },
@@ -85,7 +84,7 @@ const riskFactors = {
 };
 
 /* ----------------------------------------------------------------------------
-   API Provider Strategy & Rate Limiting (for Alpha Vantage fallback)
+   API Provider Strategy & Rate Limiting
 ----------------------------------------------------------------------------- */
 const API_PROVIDERS = {
   ALPHA_VANTAGE: 'alphavantage',
@@ -115,24 +114,16 @@ const getCurrentApiProvider = () => {
    Helper: Generate Realistic Mock Data
 ----------------------------------------------------------------------------- */
 const getMockStockData = (symbol) => {
-  if (!demoStockData[symbol]) {
-    return null;
-  }
-  
+  if (!demoStockData[symbol]) return null;
   const basePrice = demoStockData[symbol].price;
   const variation = (Math.random() * 4 - 2) / 100; // ±2%
   const newPrice = parseFloat((basePrice * (1 + variation)).toFixed(2));
-  
-  // Use historical data for percent change if available
   const prevPrice = historicalData[symbol] ? historicalData[symbol][historicalData[symbol].length - 1] : basePrice;
   const percentChange = parseFloat(((newPrice - prevPrice) / prevPrice * 100).toFixed(2));
-  
-  // Update historical data: shift and add newPrice
   if (historicalData[symbol]) {
     historicalData[symbol].shift();
     historicalData[symbol].push(newPrice);
   }
-  
   return {
     price: newPrice,
     volume: Math.floor(demoStockData[symbol].volume * (1 + (Math.random() * 0.2 - 0.1))),
@@ -149,39 +140,28 @@ const fetchAlphaVantageData = async (symbol) => {
     console.error('Alpha Vantage API key not found');
     return null;
   }
-  
   const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=5min&apikey=${apiKey}`;
   try {
     alphaVantageCallsToday++;
     const response = await axios.get(url);
     const data = response.data;
-    
-    // Check for rate limit message
     if (data.Information && data.Information.includes('rate limit')) {
       console.warn('Alpha Vantage rate limit reached:', data.Information);
       return null;
     }
-    
     if (!data["Time Series (5min)"]) {
       console.error(`Missing time series data for ${symbol}:`, data);
       return null;
     }
-    
     const timeSeries = data["Time Series (5min)"];
     const timestamps = Object.keys(timeSeries).sort((a, b) => new Date(b) - new Date(a));
     if (timestamps.length === 0) return null;
-    
     const latest = timeSeries[timestamps[0]];
     const price = parseFloat(latest["4. close"]);
     const open = parseFloat(latest["1. open"]);
     const volume = parseInt(latest["5. volume"]);
     const percentChange = parseFloat(((price - open) / open * 100).toFixed(2));
-    
-    return {
-      price,
-      volume,
-      percent_change: percentChange
-    };
+    return { price, volume, percent_change: percentChange };
   } catch (err) {
     console.error(`Error fetching Alpha Vantage data for ${symbol}:`, err.message);
     return null;
@@ -202,13 +182,10 @@ const fetchYahooFinanceData = async (symbol) => {
 const fetchStockData = async (symbol) => {
   const cacheKey = `stock_${symbol}`;
   const cachedData = stockCache.get(cacheKey);
-  if (cachedData) {
-    return cachedData;
-  }
+  if (cachedData) return cachedData;
   
   const provider = getCurrentApiProvider();
   let stockData = null;
-  
   switch (provider) {
     case API_PROVIDERS.ALPHA_VANTAGE:
       stockData = await fetchAlphaVantageData(symbol);
@@ -220,16 +197,11 @@ const fetchStockData = async (symbol) => {
       stockData = getMockStockData(symbol);
       break;
   }
-  
   if (!stockData) {
     console.log(`Falling back to mock data for ${symbol}`);
     stockData = getMockStockData(symbol);
   }
-  
-  if (stockData) {
-    stockCache.set(cacheKey, stockData);
-  }
-  
+  if (stockData) stockCache.set(cacheKey, stockData);
   return stockData;
 };
 
@@ -240,7 +212,6 @@ const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'No token provided' });
-  
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
@@ -260,9 +231,7 @@ app.post('/api/signup', async (req, res) => {
   }
   try {
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+    if (existingUser) return res.status(400).json({ message: 'User already exists' });
     const newUser = new User({ username, name, email, password });
     await newUser.save();
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -314,16 +283,13 @@ app.get('/api/positions', authenticateToken, async (req, res) => {
         console.error(`Empty symbol for holding:`, holding);
         return null;
       }
-      
       const data = await fetchStockData(symbol);
       if (!data) {
         console.error(`Could not fetch data for ${symbol}`);
         return null;
       }
-      
       const currentPrice = parseFloat(data.price);
       const dayChangePercent = parseFloat(data.percent_change);
-      
       return {
         symbol,
         companyName: symbol,
@@ -335,7 +301,6 @@ app.get('/api/positions', authenticateToken, async (req, res) => {
         isLoss: currentPrice < holding.averagePrice
       };
     }));
-    
     res.json(positions.filter(pos => pos !== null));
   } catch (error) {
     console.error('Positions Error:', error);
@@ -349,36 +314,24 @@ app.get('/api/positions', authenticateToken, async (req, res) => {
 app.post('/api/newOrder', authenticateToken, async (req, res) => {
   try {
     const { symbol, qty, mode } = req.body;
-    if (!symbol || !qty || !mode) {
-      return res.status(400).json({ message: 'Missing order parameters' });
-    }
-    if (!['buy', 'sell'].includes(mode)) {
-      return res.status(400).json({ message: 'Invalid order mode' });
-    }
+    if (!symbol || !qty || !mode) return res.status(400).json({ message: 'Missing order parameters' });
+    if (!['buy', 'sell'].includes(mode)) return res.status(400).json({ message: 'Invalid order mode' });
     
     const quantity = Number(qty);
-    if (isNaN(quantity) || quantity <= 0) {
-      return res.status(400).json({ message: 'Invalid quantity' });
-    }
+    if (isNaN(quantity) || quantity <= 0) return res.status(400).json({ message: 'Invalid quantity' });
     
     const data = await fetchStockData(symbol);
-    if (!data) {
-      return res.status(400).json({ message: `No data available for symbol: ${symbol}` });
-    }
+    if (!data) return res.status(400).json({ message: `No data available for symbol: ${symbol}` });
     
     const currentPrice = parseFloat(data.price);
-    if (isNaN(currentPrice) || currentPrice <= 0) {
-      return res.status(400).json({ message: 'Unable to fetch valid stock price' });
-    }
+    if (isNaN(currentPrice) || currentPrice <= 0) return res.status(400).json({ message: 'Unable to fetch valid stock price' });
     
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     
     if (mode === 'buy') {
       const cost = quantity * currentPrice;
-      if (user.balance < cost) {
-        return res.status(400).json({ message: 'Insufficient funds' });
-      }
+      if (user.balance < cost) return res.status(400).json({ message: 'Insufficient funds' });
       
       let holding = await HoldingsModel.findOne({ userId: req.user.id, symbol });
       if (holding) {
@@ -388,32 +341,18 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
         holding.averagePrice = totalCost / newQuantity;
         await holding.save();
       } else {
-        holding = new HoldingsModel({
-          userId: req.user.id,
-          symbol,
-          quantity,
-          averagePrice: currentPrice
-        });
+        holding = new HoldingsModel({ userId: req.user.id, symbol, quantity, averagePrice: currentPrice });
         await holding.save();
       }
-      
       user.balance -= cost;
       await user.save();
     } else if (mode === 'sell') {
       let holding = await HoldingsModel.findOne({ userId: req.user.id, symbol });
-      if (!holding || holding.quantity < quantity) {
-        return res.status(400).json({ message: 'Insufficient holdings to sell' });
-      }
-      
+      if (!holding || holding.quantity < quantity) return res.status(400).json({ message: 'Insufficient holdings to sell' });
       const proceeds = quantity * currentPrice;
       holding.quantity -= quantity;
-      
-      if (holding.quantity === 0) {
-        await HoldingsModel.deleteOne({ _id: holding._id });
-      } else {
-        await holding.save();
-      }
-      
+      if (holding.quantity === 0) await HoldingsModel.deleteOne({ _id: holding._id });
+      else await holding.save();
       user.balance += proceeds;
       await user.save();
     }
@@ -426,7 +365,6 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
       mode,
       date: new Date()
     });
-    
     await newOrder.save();
     res.json({ message: "Order processed successfully", currentPrice });
   } catch (error) {
@@ -440,12 +378,10 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
 ----------------------------------------------------------------------------- */
 app.get('/api/stock-trends', async (req, res) => {
   try {
-    // Expanded company list using our demo data keys.
     const symbols = ["RELIANCE", "TCS", "INFY", "HDFC", "ICICIBANK", "IBM", "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NFLX", "FB", "NVDA", "ORCL"];
     const trendData = await Promise.all(symbols.map(async (symbol) => {
       const data = await fetchStockData(symbol);
       if (!data) return null;
-      
       return { 
         symbol, 
         currentPrice: parseFloat(data.price), 
@@ -453,7 +389,6 @@ app.get('/api/stock-trends', async (req, res) => {
         dayChangePercent: parseFloat(data.percent_change) 
       };
     }));
-    
     res.json(trendData.filter(item => item !== null));
   } catch (error) {
     console.error('Stock Trends Error:', error);
@@ -463,58 +398,11 @@ app.get('/api/stock-trends', async (req, res) => {
 
 /* ----------------------------------------------------------------------------
    Trading Summary Endpoint (Enhanced with Dummy Data Fallback)
-   Group orders by mode (buy/sell) for the current user. If no orders exist, generate dummy data.
 ----------------------------------------------------------------------------- */
-app.get('/api/trading-summary', authenticateToken, async (req, res) => {
-  try {
-    const userId = mongoose.Types.ObjectId.isValid(req.user.id)
-      ? mongoose.Types.ObjectId(req.user.id)
-      : req.user.id;
-    
-    let summary = await OrdersModel.aggregate([
-      { $match: { userId } },
-      { 
-        $group: { 
-          _id: "$mode", 
-          totalQty: { $sum: "$qty" }, 
-          totalValue: { $sum: { $multiply: ["$qty", "$price"] } },
-          orderCount: { $sum: 1 }
-        } 
-      }
-    ]);
-    
-    // If no orders exist, generate dummy summary data for each company in demoStockData
-    if (!summary || summary.length === 0) {
-      summary = Object.keys(demoStockData).map(symbol => {
-        const totalBuyQty = Math.floor(Math.random() * 90 + 10); // Random between 10 and 100
-        const avgBuyPrice = demoStockData[symbol].price;
-        const totalBuyValue = avgBuyPrice * totalBuyQty;
-        const totalSellQty = Math.floor(Math.random() * totalBuyQty);
-        const avgSellPrice = parseFloat((avgBuyPrice * (1 + (Math.random() * 0.1 - 0.05))).toFixed(2));
-        const totalSellValue = avgSellPrice * totalSellQty;
-        const orderCount = Math.floor(Math.random() * 10 + 1);
-        const profit = totalSellValue - totalBuyValue;
-        return {
-          _id: symbol,
-          mode: "dummy",
-          totalBuyQty,
-          totalBuyValue,
-          totalSellQty,
-          totalSellValue,
-          orderCount,
-          profit,
-          avgBuyPrice,
-          avgSellPrice
-        };
-      });
-    }
-    
-    res.json(summary);
-  } catch (error) {
-    console.error('Trading Summary Error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+/* ----------------------------------------------------------------------------
+   Trading Summary Endpoint (Enhanced with Dummy Data Fallback)
+----------------------------------------------------------------------------- */
+
 
 /* ----------------------------------------------------------------------------
    All Available Stocks Endpoint
@@ -526,13 +414,12 @@ app.get('/api/all-stocks', async (req, res) => {
       const data = await fetchStockData(symbol);
       return {
         symbol,
-        name: symbol, // You could add a mapping for full company names
+        name: symbol,
         price: data ? data.price : demoStockData[symbol].price,
         volume: data ? data.volume : demoStockData[symbol].volume,
         percent_change: data ? data.percent_change : demoStockData[symbol].percent_change
       };
     }));
-    
     res.json(stocks);
   } catch (error) {
     console.error('All Stocks Error:', error);
@@ -542,10 +429,8 @@ app.get('/api/all-stocks', async (req, res) => {
 
 /* ----------------------------------------------------------------------------
    Team Performance Endpoint (Enhanced)
-   Compute performance based on percent change and volume adjustment.
 ----------------------------------------------------------------------------- */
 app.get('/api/team-performance', async (req, res) => {
-  // Expanded team mapping: assign teams to a mix of companies.
   const teamMapping = {
     "Gryffindor": "AAPL",
     "Slytherin": "TSLA",
@@ -578,7 +463,6 @@ app.get('/api/team-performance', async (req, res) => {
 
 /* ----------------------------------------------------------------------------
    Option Chain Endpoint (Enhanced)
-   Generate realistic strike prices from 85% to 115% of the current price and simulate option metrics.
 ----------------------------------------------------------------------------- */
 app.get('/api/option-chain/:symbol', async (req, res) => {
   const { symbol } = req.params;
@@ -586,14 +470,10 @@ app.get('/api/option-chain/:symbol', async (req, res) => {
   
   try {
     const data = await fetchStockData(symbol);
-    if (!data) {
-      return res.status(404).json({ message: `No data available for symbol: ${symbol}` });
-    }
+    if (!data) return res.status(404).json({ message: `No data available for ${symbol}` });
     
     const basePrice = parseFloat(data.price);
-    if (isNaN(basePrice) || basePrice <= 0) {
-      return res.status(400).json({ message: 'Invalid base price for option chain calculation' });
-    }
+    if (isNaN(basePrice) || basePrice <= 0) return res.status(400).json({ message: 'Invalid base price for option chain calculation' });
     
     const numContracts = 7;
     const strikes = [];
@@ -610,14 +490,7 @@ app.get('/api/option-chain/:symbol', async (req, res) => {
       const openInterest = Math.floor(Math.random() * 1900 + 100);
       const attackIntensity = parseFloat(((premium * openInterest * impliedVol) / 100000).toFixed(2));
       const expiry = new Date(Date.now() + ((i + 1) * 30 * 24 * 60 * 60 * 1000 / numContracts)).toISOString().split('T')[0];
-      
-      return {
-        strike,
-        expiry,
-        premium,
-        openInterest,
-        attackIntensity
-      };
+      return { strike, expiry, premium, openInterest, attackIntensity };
     });
     
     res.json({ symbol, optionChain });
@@ -629,7 +502,6 @@ app.get('/api/option-chain/:symbol', async (req, res) => {
 
 /* ----------------------------------------------------------------------------
    Portfolio Risk Analysis Endpoint
-   Uses live data if available; falls back to dummy data.
 ----------------------------------------------------------------------------- */
 app.get('/api/portfolio-risk', authenticateToken, async (req, res) => {
   try {
@@ -643,9 +515,7 @@ app.get('/api/portfolio-risk', authenticateToken, async (req, res) => {
       const symbol = holding.symbol;
       if (!symbol || symbol.trim() === "") continue;
       
-      // Try fetching live data
       let stockData = await fetchStockData(symbol);
-      // If live data fails, fall back to demo data
       if (!stockData) {
         console.log(`Falling back to dummy data for ${symbol}`);
         stockData = demoStockData[symbol] || { price: holding.averagePrice, volume: 1000000, percent_change: 0 };
@@ -669,8 +539,8 @@ app.get('/api/portfolio-risk', authenticateToken, async (req, res) => {
       trajectory.push(parseFloat((trajectory[i - 1] + change).toFixed(3)));
     }
     
-    res.json({ 
-      portfolioRisk: parseFloat(baselineRisk.toFixed(3)), 
+    res.json({
+      portfolioRisk: parseFloat(baselineRisk.toFixed(3)),
       trajectory,
       totalValue: parseFloat(totalValue.toFixed(2))
     });
@@ -700,14 +570,101 @@ app.get('/api/status', (req, res) => {
 });
 
 /* ----------------------------------------------------------------------------
+   VR Trading Pit Endpoint with WebSocket Broadcasting and Enhanced Effects
+   This endpoint aggregates market data to simulate ambient crowd noise.
+   Extra fields "animationIntensity" and "audioLevel" are computed.
+----------------------------------------------------------------------------- */
+async function getVRTradingPitData() {
+  try {
+    const symbols = Object.keys(demoStockData);
+    const marketData = await Promise.all(symbols.map(async (symbol) => {
+      const data = await fetchStockData(symbol);
+      return {
+        symbol,
+        percent_change: data ? parseFloat(data.percent_change) : demoStockData[symbol].percent_change
+      };
+    }));
+    const validData = marketData.filter(item => item.percent_change !== null && !isNaN(item.percent_change));
+    const totalPercentChange = validData.reduce((sum, item) => sum + item.percent_change, 0);
+    const avgPercentChange = totalPercentChange / validData.length;
+    
+    let crowdMood = "neutral";
+    let noiseVolume = 40;
+    if (avgPercentChange > 1) {
+      crowdMood = "euphoric";
+      noiseVolume = 80;
+    } else if (avgPercentChange > 0.1) {
+      crowdMood = "optimistic";
+      noiseVolume = 60;
+    } else if (avgPercentChange < -1) {
+      crowdMood = "panic";
+      noiseVolume = 70;
+    } else if (avgPercentChange < -0.1) {
+      crowdMood = "concerned";
+      noiseVolume = 50;
+    }
+    
+    const totalVolume = symbols.reduce((sum, symbol) => sum + (demoStockData[symbol].volume || 0), 0);
+    const averageVolume = totalVolume / symbols.length;
+    
+    // Compute market volatility (standard deviation of percent changes)
+    const mean = avgPercentChange;
+    const variance = validData.reduce((acc, item) => acc + Math.pow(item.percent_change - mean, 2), 0) / validData.length;
+    const marketVolatility = Math.sqrt(variance);
+    
+    // Extra calculations for dynamic effects:
+    // Map absolute avgPercentChange to an animation intensity (0-1)
+    const animationIntensity = Math.min(Math.abs(avgPercentChange) / 5, 1);
+    // Map noiseVolume (0-100) to an audio level (0-1)
+    const audioLevel = noiseVolume / 100;
+    
+    return {
+      avgPercentChange: parseFloat(avgPercentChange.toFixed(2)),
+      crowdMood,
+      noiseVolume,
+      averageVolume: Math.round(averageVolume),
+      marketVolatility: parseFloat(marketVolatility.toFixed(2)),
+      animationIntensity,
+      audioLevel,
+      message: `Market average change is ${avgPercentChange.toFixed(2)}% with volatility ${marketVolatility.toFixed(2)}. Crowd feels ${crowdMood}.`
+    };
+  } catch (error) {
+    console.error("VR Trading Pit Error:", error);
+    throw error;
+  }
+}
+
+app.get('/api/vr-trading-pit', async (req, res) => {
+  try {
+    const vrData = await getVRTradingPitData();
+    res.json(vrData);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/* ----------------------------------------------------------------------------
+   WebSocket Integration for VR Trading Pit
+----------------------------------------------------------------------------- */
+const httpServer = createServer(app);
+const io = new Server(httpServer, { cors: { origin: "*" } });
+setInterval(async () => {
+  try {
+    const vrData = await getVRTradingPitData();
+    io.emit("vrData", vrData);
+  } catch (error) {
+    console.error("Error emitting VR Trading Pit data:", error);
+  }
+}, 30000);
+
+/* ----------------------------------------------------------------------------
    Start Server & Connect to MongoDB
 ----------------------------------------------------------------------------- */
 const startServer = async () => {
   try {
     await mongoose.connect(mongoURL);
     console.log("Connected to MongoDB");
-    
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Using ${getCurrentApiProvider()} as the initial data provider`);
     });
