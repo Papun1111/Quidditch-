@@ -56,7 +56,7 @@ const TradingSummary: React.FC = () => {
                 <th className="py-2 px-4 border">Symbol</th>
                 <th className="py-2 px-4 border">Buy Qty</th>
                 <th className="py-2 px-4 border">Buy Value</th>
-                <th className="py-2 px-4 border">Sell Qty</th>
+                <th className="py-2 px-4 border">Hello world Qty</th>
                 <th className="py-2 px-4 border">Sell Value</th>
                 <th className="py-2 px-4 border">Profit</th>
                 <th className="py-2 px-4 border">Avg Buy Price</th>
