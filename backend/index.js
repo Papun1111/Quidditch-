@@ -8,7 +8,7 @@ import cors from 'cors';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
-import NodeCache from 'node-cache'; // Add this package via npm install node-cache
+import NodeCache from 'node-cache'; // Install with: npm install node-cache
 
 import { User } from './model/userModels.js';
 import { OrdersModel } from './model/OrdersModel.js';
@@ -24,89 +24,74 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// ---------- Demo Data for Fallback ----------
+/* ----------------------------------------------------------------------------
+   Expanded Demo Data & Risk Factors for U.S. Companies
+----------------------------------------------------------------------------- */
 const demoStockData = {
-  "RELIANCE": { price: 2400, volume: 20000, percent_change: 0.5 },
-  "TCS": { price: 3500, volume: 15000, percent_change: 0.7 },
-  "INFY": { price: 1500, volume: 25000, percent_change: -0.3 },
-  "HDFC": { price: 3000, volume: 12000, percent_change: 0.2 },
-  "ICICIBANK": { price: 650, volume: 30000, percent_change: -0.1 }
+  "IBM": { price: 130, volume: 3000000, percent_change: 0.5 },
+  "AAPL": { price: 150, volume: 5000000, percent_change: 0.7 },
+  "MSFT": { price: 280, volume: 2000000, percent_change: -0.3 },
+  "GOOGL": { price: 2700, volume: 1000000, percent_change: 0.2 },
+  "AMZN": { price: 3400, volume: 1500000, percent_change: -0.1 },
+  "TSLA": { price: 700, volume: 4000000, percent_change: 1.2 },
+  "NFLX": { price: 550, volume: 1800000, percent_change: -0.5 },
+  "FB": { price: 330, volume: 2200000, percent_change: 0.8 },
+  "NVDA": { price: 200, volume: 2500000, percent_change: 2.1 },
+  "ORCL": { price: 90, volume: 1500000, percent_change: -0.3 }
 };
 
-// Add more realistic historical data for trends
-const historicalData = {
-  "RELIANCE": [2350, 2380, 2400, 2420, 2400],
-  "TCS": [3450, 3470, 3500, 3520, 3500],
-  "INFY": [1520, 1510, 1500, 1490, 1500],
-  "HDFC": [2980, 2990, 3000, 3010, 3000],
-  "ICICIBANK": [655, 652, 650, 648, 650]
-};
-
-// ---------- Risk Factors for Portfolio Analysis ----------
 const riskFactors = {
-  "RELIANCE": 0.3,
-  "TCS": 0.4,
-  "INFY": 0.5,
-  "HDFC": 0.2,
-  "ICICIBANK": 0.6
+  "IBM": 0.3,
+  "AAPL": 0.4,
+  "MSFT": 0.5,
+  "GOOGL": 0.2,
+  "AMZN": 0.6,
+  "TSLA": 0.8,
+  "NFLX": 0.7,
+  "FB": 0.5,
+  "NVDA": 0.9,
+  "ORCL": 0.3
 };
 
-// ---------- API Provider Strategy ----------
-// Multiple stock API providers to fallback on in case of rate limits
+/* ----------------------------------------------------------------------------
+   API Provider Strategy & Rate Limiting (for Alpha Vantage fallback)
+----------------------------------------------------------------------------- */
 const API_PROVIDERS = {
   ALPHA_VANTAGE: 'alphavantage',
   YAHOO_FINANCE: 'yahoofinance',
-  MOCK: 'mock'  // Our local fallback
+  MOCK: 'mock'
 };
 
-// Track API rate limiting
 let alphaVantageCallsToday = 0;
 let lastApiReset = new Date().setHours(0, 0, 0, 0);
 
-// ---------- Helper: Get Current API Provider ----------
 const getCurrentApiProvider = () => {
-  // Reset counter at the beginning of a new day
   const today = new Date().setHours(0, 0, 0, 0);
   if (today > lastApiReset) {
     alphaVantageCallsToday = 0;
     lastApiReset = today;
   }
-
-  // Check if Alpha Vantage has calls remaining (limit is 25 for free tier)
   if (alphaVantageCallsToday < 20 && process.env.ALPHAVANTAGE_API_KEY) {
     return API_PROVIDERS.ALPHA_VANTAGE;
   }
-  
-  // Add Yahoo Finance API check here if you set it up
   if (process.env.YAHOO_FINANCE_API_KEY) {
     return API_PROVIDERS.YAHOO_FINANCE;
   }
-  
-  // Fallback to mock data
   return API_PROVIDERS.MOCK;
 };
 
-// ---------- Helper: Generate Realistic Mock Data ----------
+/* ----------------------------------------------------------------------------
+   Helper: Generate Realistic Mock Data
+----------------------------------------------------------------------------- */
 const getMockStockData = (symbol) => {
   if (!demoStockData[symbol]) {
     return null;
   }
-  
   const basePrice = demoStockData[symbol].price;
-  // Create slight variation (±2%) for realistic mock
   const variation = (Math.random() * 4 - 2) / 100;
   const newPrice = parseFloat((basePrice * (1 + variation)).toFixed(2));
-  
-  // Calculate percent change
-  const prevPrice = historicalData[symbol] ? historicalData[symbol][historicalData[symbol].length - 1] : basePrice;
+  const prevPrice = basePrice; // For simplicity
   const percentChange = parseFloat(((newPrice - prevPrice) / prevPrice * 100).toFixed(2));
-  
-  // Update historical data (shift array and add new price)
-  if (historicalData[symbol]) {
-    historicalData[symbol].shift();
-    historicalData[symbol].push(newPrice);
-  }
-  
   return {
     price: newPrice,
     volume: Math.floor(demoStockData[symbol].volume * (1 + (Math.random() * 0.2 - 0.1))),
@@ -114,41 +99,36 @@ const getMockStockData = (symbol) => {
   };
 };
 
-// ---------- Helper: Fetch Alpha Vantage Stock Data ----------
+/* ----------------------------------------------------------------------------
+   Helper: Fetch Alpha Vantage Stock Data
+----------------------------------------------------------------------------- */
 const fetchAlphaVantageData = async (symbol) => {
   const apiKey = process.env.ALPHAVANTAGE_API_KEY;
   if (!apiKey) {
     console.error('Alpha Vantage API key not found');
     return null;
   }
-  
   const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=5min&apikey=${apiKey}`;
   try {
     alphaVantageCallsToday++;
     const response = await axios.get(url);
     const data = response.data;
-    
-    // Check for rate limit message
     if (data.Information && data.Information.includes('rate limit')) {
       console.warn('Alpha Vantage rate limit reached:', data.Information);
       return null;
     }
-    
     if (!data["Time Series (5min)"]) {
       console.error(`Missing time series data for ${symbol}:`, data);
       return null;
     }
-    
     const timeSeries = data["Time Series (5min)"];
     const timestamps = Object.keys(timeSeries).sort((a, b) => new Date(b) - new Date(a));
     if (timestamps.length === 0) return null;
-    
     const latest = timeSeries[timestamps[0]];
     const price = parseFloat(latest["4. close"]);
     const open = parseFloat(latest["1. open"]);
     const volume = parseInt(latest["5. volume"]);
     const percentChange = parseFloat(((price - open) / open * 100).toFixed(2));
-    
     return {
       price,
       volume,
@@ -160,28 +140,25 @@ const fetchAlphaVantageData = async (symbol) => {
   }
 };
 
-// ---------- Helper: Fetch Yahoo Finance Stock Data ----------
-// This is a placeholder - you would need to implement the actual Yahoo Finance API
+/* ----------------------------------------------------------------------------
+   Placeholder: Fetch Yahoo Finance Data
+----------------------------------------------------------------------------- */
 const fetchYahooFinanceData = async (symbol) => {
-  // This would be implemented using the Yahoo Finance API
-  // For now, return null to fallback to mock data
   console.log(`Yahoo Finance API would be called for ${symbol}`);
   return null;
 };
 
-// ---------- Main Stock Data Fetcher with Caching and Fallbacks ----------
+/* ----------------------------------------------------------------------------
+   Main Stock Data Fetcher with Caching and Fallbacks
+----------------------------------------------------------------------------- */
 const fetchStockData = async (symbol) => {
-  // Check cache first
   const cacheKey = `stock_${symbol}`;
   const cachedData = stockCache.get(cacheKey);
   if (cachedData) {
     return cachedData;
   }
-  
-  // Determine which API provider to use
   const provider = getCurrentApiProvider();
   let stockData = null;
-  
   switch (provider) {
     case API_PROVIDERS.ALPHA_VANTAGE:
       stockData = await fetchAlphaVantageData(symbol);
@@ -190,26 +167,22 @@ const fetchStockData = async (symbol) => {
       stockData = await fetchYahooFinanceData(symbol);
       break;
     default:
-      // Fallback to mock data
       stockData = getMockStockData(symbol);
       break;
   }
-  
-  // If external APIs failed, fallback to mock data
   if (!stockData) {
     console.log(`Falling back to mock data for ${symbol}`);
     stockData = getMockStockData(symbol);
   }
-  
-  // Save to cache if we have data
   if (stockData) {
     stockCache.set(cacheKey, stockData);
   }
-  
   return stockData;
 };
 
-// ---------- Authentication Middleware ----------
+/* ----------------------------------------------------------------------------
+   Authentication Middleware
+----------------------------------------------------------------------------- */
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -224,7 +197,9 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
-// ---------- Signup Endpoint (Auto-Login) ----------
+/* ----------------------------------------------------------------------------
+   User Endpoints: Signup and Login
+----------------------------------------------------------------------------- */
 app.post('/api/signup', async (req, res) => {
   const { username, name, email, password } = req.body;
   if (!username || !name || !email || !password) {
@@ -245,7 +220,6 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
-// ---------- Login Endpoint ----------
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ message: 'All fields are required' });
@@ -262,7 +236,9 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// ---------- Holdings Endpoint ----------
+/* ----------------------------------------------------------------------------
+   Holdings Endpoint
+----------------------------------------------------------------------------- */
 app.get('/api/holdings', authenticateToken, async (req, res) => {
   try {
     const holdings = await HoldingsModel.find({ userId: req.user.id });
@@ -273,46 +249,54 @@ app.get('/api/holdings', authenticateToken, async (req, res) => {
   }
 });
 
-// ---------- Positions Endpoint ----------
+/* ----------------------------------------------------------------------------
+   Positions Endpoint
+----------------------------------------------------------------------------- */
 app.get('/api/positions', authenticateToken, async (req, res) => {
   try {
     const holdings = await HoldingsModel.find({ userId: req.user.id });
-    const positions = await Promise.all(holdings.map(async (holding) => {
-      const symbol = holding.symbol;
-      if (!symbol || symbol.trim() === "") {
-        console.error(`Empty symbol for holding:`, holding);
-        return null;
-      }
-      
-      const data = await fetchStockData(symbol);
-      if (!data) {
-        console.error(`Could not fetch any data for ${symbol}`);
-        return null;
-      }
-      
-      const currentPrice = parseFloat(data.price);
-      const dayChangePercent = parseFloat(data.percent_change);
-      
-      return {
-        symbol,
-        companyName: symbol,
-        quantity: holding.quantity,
-        averagePrice: holding.averagePrice,
-        currentPrice,
-        netChange: (currentPrice - holding.averagePrice) * holding.quantity,
-        dayChangePercent,
-        isLoss: currentPrice < holding.averagePrice
-      };
-    }));
-    
-    res.json(positions.filter(pos => pos !== null));
+    const positions = await Promise.all(
+      holdings.map(async (holding) => {
+        const symbol = holding.symbol;
+        if (!symbol || symbol.trim() === "") {
+          console.error(`Empty symbol for holding:`, holding);
+          return null;
+        }
+        // Attempt to fetch live data
+        let data = await fetchStockData(symbol);
+        // If live data fails, fall back to mock data
+        if (!data) {
+          console.warn(`Falling back to mock data for ${symbol}`);
+          data = getMockStockData(symbol);
+        }
+        if (!data) {
+          console.error(`No data available for ${symbol}`);
+          return null;
+        }
+        const currentPrice = parseFloat(data.price);
+        const dayChangePercent = parseFloat(data.percent_change);
+        return {
+          symbol,
+          companyName: symbol, 
+          quantity: holding.quantity,
+          averagePrice: holding.averagePrice,
+          currentPrice,
+          netChange: (currentPrice - holding.averagePrice) * holding.quantity,
+          dayChangePercent,
+          isLoss: currentPrice < holding.averagePrice,
+        };
+      })
+    );
+    res.json(positions.filter((pos) => pos !== null));
   } catch (error) {
-    console.error('Positions Error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Positions Error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// ---------- New Order Endpoint ----------
+/* ----------------------------------------------------------------------------
+   New Order Endpoint
+----------------------------------------------------------------------------- */
 app.post('/api/newOrder', authenticateToken, async (req, res) => {
   try {
     const { symbol, qty, mode } = req.body;
@@ -322,22 +306,18 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
     if (!['buy', 'sell'].includes(mode)) {
       return res.status(400).json({ message: 'Invalid order mode' });
     }
-    
     const quantity = Number(qty);
     if (isNaN(quantity) || quantity <= 0) {
       return res.status(400).json({ message: 'Invalid quantity' });
     }
-    
     const data = await fetchStockData(symbol);
     if (!data) {
       return res.status(400).json({ message: `No data available for symbol: ${symbol}` });
     }
-    
     const currentPrice = parseFloat(data.price);
     if (isNaN(currentPrice) || currentPrice <= 0) {
       return res.status(400).json({ message: 'Unable to fetch valid stock price' });
     }
-    
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     
@@ -363,7 +343,6 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
         });
         await holding.save();
       }
-      
       user.balance -= cost;
       await user.save();
     } else if (mode === 'sell') {
@@ -371,16 +350,13 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
       if (!holding || holding.quantity < quantity) {
         return res.status(400).json({ message: 'Insufficient holdings to sell' });
       }
-      
       const proceeds = quantity * currentPrice;
       holding.quantity -= quantity;
-      
       if (holding.quantity === 0) {
         await HoldingsModel.deleteOne({ _id: holding._id });
       } else {
         await holding.save();
       }
-      
       user.balance += proceeds;
       await user.save();
     }
@@ -393,7 +369,6 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
       mode,
       date: new Date()
     });
-    
     await newOrder.save();
     res.json({ message: "Order processed successfully", currentPrice });
   } catch (error) {
@@ -402,22 +377,23 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
   }
 });
 
-// ---------- Stock Trends Endpoint ----------
+/* ----------------------------------------------------------------------------
+   Stock Trends Endpoint
+----------------------------------------------------------------------------- */
 app.get('/api/stock-trends', async (req, res) => {
   try {
-    const symbols = ["RELIANCE", "TCS", "INFY", "HDFC", "ICICIBANK"];
+    // Expanded company list using our demo data keys.
+    const symbols = ["IBM", "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NFLX", "FB", "NVDA", "ORCL"];
     const trendData = await Promise.all(symbols.map(async (symbol) => {
       const data = await fetchStockData(symbol);
       if (!data) return null;
-      
       return { 
         symbol, 
         currentPrice: parseFloat(data.price), 
-        volume: parseInt(data.volume) || 0, 
+        volume: parseInt(data.volume) || demoStockData[symbol].volume, 
         dayChangePercent: parseFloat(data.percent_change) 
       };
     }));
-    
     res.json(trendData.filter(item => item !== null));
   } catch (error) {
     console.error('Stock Trends Error:', error);
@@ -425,24 +401,54 @@ app.get('/api/stock-trends', async (req, res) => {
   }
 });
 
-// ---------- Trading Summary Endpoint ----------
+/* ----------------------------------------------------------------------------
+   Trading Summary Endpoint (Enhanced)
+   Group orders by both symbol and mode (buy/sell), including total quantity and total value.
+----------------------------------------------------------------------------- */
 app.get('/api/trading-summary', authenticateToken, async (req, res) => {
   try {
-    // Convert string ID to ObjectId if needed
-    const userId = mongoose.Types.ObjectId.isValid(req.user.id) 
-      ? mongoose.Types.ObjectId(req.user.id) 
+    const userId = mongoose.Types.ObjectId.isValid(req.user.id)
+      ? mongoose.Types.ObjectId(req.user.id)
       : req.user.id;
-      
-    const summary = await OrdersModel.aggregate([
+
+    let summary = await OrdersModel.aggregate([
       { $match: { userId } },
-      { $group: { 
-          _id: "$mode", 
-          totalQty: { $sum: "$qty" }, 
+      {
+        $group: {
+          _id: { symbol: "$symbol", mode: "$mode" },
+          totalQty: { $sum: "$qty" },
           totalValue: { $sum: { $multiply: ["$qty", "$price"] } },
           orderCount: { $sum: 1 }
-        } 
-      }
+        }
+      },
+      { $sort: { "_id.symbol": 1 } }
     ]);
+
+    // If no orders exist for the user, generate dummy summary data
+    if (!summary || summary.length === 0) {
+      summary = Object.keys(demoStockData).map(symbol => {
+        // Generate random dummy data for demonstration
+        const totalBuyQty = Math.floor(Math.random() * 90 + 10); // 10 to 100
+        const avgBuyPrice = demoStockData[symbol].price;
+        const totalBuyValue = avgBuyPrice * totalBuyQty;
+        const totalSellQty = Math.floor(Math.random() * totalBuyQty);
+        const avgSellPrice = parseFloat((avgBuyPrice * (1 + (Math.random() * 0.1 - 0.05))).toFixed(2));
+        const totalSellValue = avgSellPrice * totalSellQty;
+        const orderCount = Math.floor(Math.random() * 10 + 1);
+        const profit = totalSellValue - totalBuyValue;
+        return {
+          symbol,
+          totalBuyQty,
+          totalBuyValue,
+          totalSellQty,
+          totalSellValue,
+          orderCount,
+          profit,
+          avgBuyPrice,
+          avgSellPrice
+        };
+      });
+    }
     
     res.json(summary);
   } catch (error) {
@@ -451,21 +457,24 @@ app.get('/api/trading-summary', authenticateToken, async (req, res) => {
   }
 });
 
-// ---------- All Available Stocks Endpoint ----------
+
+/* ----------------------------------------------------------------------------
+   All Available Stocks Endpoint
+----------------------------------------------------------------------------- */
 app.get('/api/all-stocks', async (req, res) => {
   try {
+    // Use expanded demo data keys as available companies.
     const symbols = Object.keys(demoStockData);
     const stocks = await Promise.all(symbols.map(async (symbol) => {
       const data = await fetchStockData(symbol);
       return {
         symbol,
-        name: symbol, // You could add a mapping for full company names
-        price: data.price,
-        volume: data.volume,
-        percent_change: data.percent_change
+        name: symbol, // Ideally map to full company names
+        price: data ? data.price : demoStockData[symbol].price,
+        volume: data ? data.volume : demoStockData[symbol].volume,
+        percent_change: data ? data.percent_change : demoStockData[symbol].percent_change
       };
     }));
-    
     res.json(stocks);
   } catch (error) {
     console.error('All Stocks Error:', error);
@@ -473,58 +482,81 @@ app.get('/api/all-stocks', async (req, res) => {
   }
 });
 
-// ---------- Team Performance Endpoint ----------
+/* ----------------------------------------------------------------------------
+   Team Performance Endpoint (Enhanced)
+   Compute performance based on percent change and a volume adjustment.
+----------------------------------------------------------------------------- */
 app.get('/api/team-performance', async (req, res) => {
+  // Use expanded team mapping (for demonstration, mapping some companies to teams)
   const teamMapping = {
-    "Gryffindor": "RELIANCE",
-    "Slytherin": "TCS",
-    "Hufflepuff": "INFY",
-    "Ravenclaw": "HDFC",
-    "Durmstrang": "ICICIBANK"
+    "Gryffindor": "IBM",
+    "Slytherin": "AAPL",
+    "Hufflepuff": "MSFT",
+    "Ravenclaw": "GOOGL",
+    "Durmstrang": "AMZN",
+    "Phoenix": "TSLA",
+    "Shadow": "NFLX",
+    "Mystic": "FB",
+    "Titan": "NVDA",
+    "Oracle": "ORCL"
   };
 
   try {
     const teamsPerformance = await Promise.all(Object.entries(teamMapping).map(async ([team, symbol]) => {
       const data = await fetchStockData(symbol);
-      if (!data) return { team, symbol, performance: 0 };
-      
-      return { 
-        team, 
-        symbol, 
-        performance: parseFloat(data.percent_change) 
-      };
+      const effectiveData = data || demoStockData[symbol];
+      if (!effectiveData) throw new Error(`Data not available for ${symbol}`);
+      const percentChange = parseFloat(effectiveData.percent_change);
+      const volume = effectiveData.volume ? parseFloat(effectiveData.volume) : 1;
+      // Example performance: percentChange multiplied by logarithm of volume
+      const performanceScore = percentChange * Math.log(volume);
+      return { team, symbol, performance: parseFloat(performanceScore.toFixed(2)) };
     }));
-    
     res.json(teamsPerformance);
   } catch (error) {
-    console.error('Team Performance Error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Team Performance Error:', error.message);
+    res.status(500).json({ message: 'Server error: ' + error.message });
   }
 });
 
-// ---------- Option Chain Endpoint ----------
+/* ----------------------------------------------------------------------------
+   Option Chain Endpoint (Enhanced)
+   Generate realistic strike prices from 85% to 115% of the current price and simulate option metrics.
+----------------------------------------------------------------------------- */
 app.get('/api/option-chain/:symbol', async (req, res) => {
   const { symbol } = req.params;
   if (!symbol) return res.status(400).json({ message: 'Stock symbol required' });
   
   try {
     const data = await fetchStockData(symbol);
-    if (!data) {
-      return res.status(404).json({ message: `No data available for symbol: ${symbol}` });
+    const effectiveData = data || demoStockData[symbol];
+    if (!effectiveData) return res.status(404).json({ message: `Data not available for ${symbol}` });
+    
+    const basePrice = parseFloat(effectiveData.price);
+    if (isNaN(basePrice) || basePrice <= 0) {
+      return res.status(400).json({ message: 'Invalid base price for option chain calculation' });
     }
     
-    const basePrice = parseFloat(data.price);
+    // Generate a series of strike prices from 85% to 115% of basePrice.
+    const numContracts = 7;
+    const strikes = [];
+    const lowerBound = basePrice * 0.85;
+    const upperBound = basePrice * 1.15;
+    const interval = (upperBound - lowerBound) / (numContracts - 1);
+    for (let i = 0; i < numContracts; i++) {
+      strikes.push(Math.round(lowerBound + i * interval));
+    }
     
-    const optionChain = Array.from({ length: 5 }, (_, i) => {
-      const offset = Math.random() * 0.2 - 0.1; // ±10% offset
-      const strike = Math.round(basePrice * (1 + offset));
-      const premium = parseFloat((Math.random() * 50 + 5).toFixed(2));
-      const openInterest = Math.floor(Math.random() * 1000 + 100);
-      const attackIntensity = parseFloat(((premium * openInterest) / 10000).toFixed(2));
+    const optionChain = strikes.map((strike, i) => {
+      const impliedVol = Math.random() * 0.25 + 0.15; // 15% to 40%
+      const premium = parseFloat((Math.abs(basePrice - strike) * impliedVol * 0.5 + (Math.random() * 2)).toFixed(2));
+      const openInterest = Math.floor(Math.random() * 1900 + 100);
+      const attackIntensity = parseFloat(((premium * openInterest * impliedVol) / 100000).toFixed(2));
+      const expiry = new Date(Date.now() + ((i + 1) * 30 * 24 * 60 * 60 * 1000 / numContracts)).toISOString().split('T')[0];
       
       return {
         strike,
-        expiry: new Date(Date.now() + (i + 1) * 86400000).toISOString().split('T')[0],
+        expiry,
         premium,
         openInterest,
         attackIntensity
@@ -538,7 +570,9 @@ app.get('/api/option-chain/:symbol', async (req, res) => {
   }
 });
 
-// ---------- Portfolio Risk Analysis Endpoint ----------
+/* ----------------------------------------------------------------------------
+   Portfolio Risk Analysis Endpoint
+----------------------------------------------------------------------------- */
 app.get('/api/portfolio-risk', authenticateToken, async (req, res) => {
   try {
     const holdings = await HoldingsModel.find({ userId: req.user.id });
@@ -546,33 +580,42 @@ app.get('/api/portfolio-risk', authenticateToken, async (req, res) => {
 
     let totalValue = 0;
     let weightedRiskSum = 0;
-    
+
     for (const holding of holdings) {
       const symbol = holding.symbol;
       if (!symbol || symbol.trim() === "") continue;
-      
-      const data = await fetchStockData(symbol);
-      if (!data) continue;
-      
-      const currentPrice = parseFloat(data.price);
-      const holdingValue = holding.quantity * currentPrice;
-      
-      totalValue += holdingValue;
-      
-      const riskFactor = riskFactors[symbol] || 0.5;
-      weightedRiskSum += riskFactor * holdingValue;
-    }
-    
-    const baselineRisk = totalValue > 0 ? weightedRiskSum / totalValue : 0;
 
+      // Try fetching live stock data
+      let stockData = await fetchStockData(symbol);
+      // Fallback to demo data if live data not available
+      if (!stockData) {
+        stockData = demoStockData[symbol] || { price: holding.averagePrice, volume: 1000000, percent_change: 0 };
+      }
+
+      const currentPrice = parseFloat(stockData.price);
+      if (isNaN(currentPrice) || currentPrice <= 0) continue;
+
+      const holdingValue = holding.quantity * currentPrice;
+      totalValue += holdingValue;
+
+      // Use percent_change as risk indicator (absolute value)
+      const riskIndicator = Math.abs(parseFloat(stockData.percent_change));
+      // Fallback risk factor if not defined
+      const riskFactor = riskFactors[symbol] || 0.5;
+
+      weightedRiskSum += riskIndicator * riskFactor * holdingValue;
+    }
+
+    const baselineRisk = totalValue > 0 ? weightedRiskSum / totalValue : 0;
+    // Create a dummy trajectory with slight random changes
     const trajectory = [parseFloat(baselineRisk.toFixed(3))];
     for (let i = 1; i < 10; i++) {
       const change = (Math.random() - 0.5) * 0.1;
       trajectory.push(parseFloat((trajectory[i - 1] + change).toFixed(3)));
     }
-    
-    res.json({ 
-      portfolioRisk: parseFloat(baselineRisk.toFixed(3)), 
+
+    res.json({
+      portfolioRisk: parseFloat(baselineRisk.toFixed(3)),
       trajectory,
       totalValue: parseFloat(totalValue.toFixed(2))
     });
@@ -582,7 +625,9 @@ app.get('/api/portfolio-risk', authenticateToken, async (req, res) => {
   }
 });
 
-// ---------- API Status Endpoint ----------
+/* ----------------------------------------------------------------------------
+   API Status Endpoint
+----------------------------------------------------------------------------- */
 app.get('/api/status', (req, res) => {
   const currentProvider = getCurrentApiProvider();
   const apiLimitInfo = {
@@ -599,7 +644,9 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// ---------- Start Server and Connect to MongoDB ----------
+/* ----------------------------------------------------------------------------
+   Start Server & Connect to MongoDB
+----------------------------------------------------------------------------- */
 const startServer = async () => {
   try {
     await mongoose.connect(mongoURL);
