@@ -12,11 +12,12 @@ import Holdings from "../components/Holdings";
 import Positions from "../components/Positions";
 import OrderForm from "../components/OrderForm";
 import StockTrends from "../components/StockTrends";
-import TradingSummary from "../components/TradingSummary";
+// Removed TradingSummary import
 import TeamPerformance from "../components/TeamPerformance";
 import OptionChain from "../components/OptionChain";
 import PortfolioRisk from "../components/PortfolioRisk";
 import { AuthContext } from "../components/AuthContext";
+import VRTradingPit from "../components/VRTradingPit";
 
 // ============================================================================
 // GOOEYNAV COMPONENT (INLINED)
@@ -384,10 +385,11 @@ const Dashboard: React.FC = () => {
     { label: "Positions", href: "#positions" },
     { label: "New Order", href: "#newOrder" },
     { label: "Stock Trends", href: "#stockTrends" },
-    { label: "Trading Summary", href: "#tradingSummary" },
+    // Removed Trading Summary
     { label: "Team Performance", href: "#teamPerformance" },
     { label: "Option Chain", href: "#optionChain" },
     { label: "Portfolio Risk", href: "#portfolioRisk" },
+    { label: "VR Trading Pit", href: "#vrtradingpt" },
   ];
 
   // Listen for hash changes and update the active tab accordingly
@@ -419,14 +421,15 @@ const Dashboard: React.FC = () => {
         return <OrderForm />;
       case "stockTrends":
         return <StockTrends />;
-      case "tradingSummary":
-        return <TradingSummary />;
+      // Removed tradingSummary case
       case "teamPerformance":
         return <TeamPerformance />;
       case "optionChain":
         return <OptionChain />;
       case "portfolioRisk":
         return <PortfolioRisk />;
+      case "vrtradingpt":
+        return <VRTradingPit />;
       default:
         return null;
     }
