@@ -10,7 +10,11 @@ interface AnimatedItemProps {
   index: number;
 }
 
-const AnimatedItem: React.FC<AnimatedItemProps> = ({ children, delay = 0, index }) => {
+const AnimatedItem: React.FC<AnimatedItemProps> = ({
+  children,
+  delay = 0,
+  index,
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.5, once: false });
 
@@ -21,7 +25,7 @@ const AnimatedItem: React.FC<AnimatedItemProps> = ({ children, delay = 0, index 
       initial={{ scale: 0.9, opacity: 0 }}
       animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.9, opacity: 0 }}
       transition={{ duration: 0.3, delay }}
-      className="w-full mb-3"
+      className="w-full mb-4"
     >
       {children}
     </motion.div>
@@ -36,11 +40,17 @@ interface AnimatedListProps<T> {
 
 const AnimatedList = <T,>({ items, renderItem }: AnimatedListProps<T>) => {
   return (
-    <div className="relative w-full">
-      <div className="max-h-[400px] overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-900">
+    <div className="relative w-full max-w-2xl mx-auto">
+      <div className="max-h-[400px] overflow-y-auto p-4 rounded-lg border border-gray-800 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
         {items.map((item, index) => (
           <AnimatedItem key={index} delay={0.1} index={index}>
-            {renderItem ? renderItem(item, index) : <div className="p-4 bg-gray-800 rounded-lg">{item as any}</div>}
+            {renderItem ? (
+              renderItem(item, index)
+            ) : (
+              <div className="p-4 bg-gray-800 rounded-lg text-white">
+                {item as any}
+              </div>
+            )}
           </AnimatedItem>
         ))}
       </div>
@@ -50,7 +60,9 @@ const AnimatedList = <T,>({ items, renderItem }: AnimatedListProps<T>) => {
 
 // --- Holdings Component ---
 const Holdings: React.FC = () => {
-  const [holdings, setHoldings] = useState<{ symbol: string; quantity: number; averagePrice: number }[]>([]);
+  const [holdings, setHoldings] = useState<
+    { symbol: string; quantity: number; averagePrice: number }[]
+  >([]);
   const { token } = useContext(AuthContext);
 
   useEffect(() => {
@@ -68,29 +80,38 @@ const Holdings: React.FC = () => {
   }, [token]);
 
   // Render function for a single holding
-  const renderHolding = (holding: any, index: number) => (
-    <div className="w-full p-4 bg-gray-900 rounded-lg shadow-md transition-all duration-300 hover:bg-gray-800">
-      <div className="flex justify-between items-center w-full">
-        <span className="text-white font-semibold">{holding.symbol}</span>
-        <span className="text-white">Qty: {holding.quantity}</span>
-        <span className="text-white">Avg: ${holding.averagePrice}</span>
+  const renderHolding = (
+    holding: { symbol: string; quantity: number; averagePrice: number },
+    index: number
+  ) => (
+    <motion.div
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className="p-4 bg-gray-900 rounded-lg shadow-md flex items-center justify-between 
+                 transition-transform duration-200 hover:bg-gray-800"
+    >
+      <span className="text-white font-semibold text-lg">{holding.symbol}</span>
+      <div className="flex flex-col items-end space-y-1">
+        <span className="text-white text-sm">Qty: {holding.quantity}</span>
+        {/* Format average price to 2 decimals */}
+        <span className="text-white text-sm">
+          Avg: ${holding.averagePrice.toFixed(2)}
+        </span>
       </div>
-    </div>
+    </motion.div>
   );
 
   return (
     <div className="container mx-auto p-6 flex flex-col items-center w-full">
-      {/* Header Animation with Center Alignment */}
       <motion.h2
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
-        className="text-3xl font-bold text-white mb-6 text-center w-full"
+        className="text-3xl font-bold text-white mb-6 text-center"
       >
         📊 Your Holdings
       </motion.h2>
 
-      {/* Animated List Component */}
       <AnimatedList items={holdings} renderItem={renderHolding} />
     </div>
   );

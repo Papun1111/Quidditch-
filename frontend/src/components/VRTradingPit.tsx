@@ -1,3 +1,4 @@
+// VRTradingPit.tsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
@@ -17,8 +18,9 @@ import { FaSmile, FaMeh, FaFrown } from 'react-icons/fa';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { AudioLoader, AudioListener, PositionalAudio } from 'three';
+import TFPredictionsHoldings from './TFPredictions';
 
-// Import audio files
+// Import audio files from your public/assets folder
 import crowd from '../assets/crowd.mp3';
 import neutral from '../assets/neutral.mp3';
 import sad from '../assets/sad.mp3';
@@ -27,10 +29,10 @@ import panic from '../assets/panic.mp3';
 interface VRPitData {
   avgPercentChange: number;
   crowdMood: string;
-  noiseVolume: number;
+  noiseVolume: number; // 0-100 scale for ambient sound level
   averageVolume: number;
-  animationIntensity: number;
-  audioLevel: number;
+  animationIntensity: number; // 0-1 value to drive visual effects
+  audioLevel: number; // 0-1 value to drive audio volume
   message: string;
 }
 
@@ -61,7 +63,7 @@ const AmbientAudio: React.FC<{ audioLevel: number; avgChange: number; mood: stri
     });
   }, [audioLoader, audioLevel, avgChange, mood]);
 
-  // Ensure AudioContext resumes on user interaction (for autoplay)
+  // Ensure AudioContext resumes on user interaction for autoplay
   useEffect(() => {
     const resumeAudioContext = () => {
       if (soundRef.current && soundRef.current.context.state === 'suspended') {
@@ -75,10 +77,18 @@ const AmbientAudio: React.FC<{ audioLevel: number; avgChange: number; mood: stri
   return <positionalAudio ref={soundRef} args={[listener]} />;
 };
 
-const VRTradingPitScene: React.FC<{ animationIntensity: number; noiseVolume: number; audioLevel: number; avgPercentChange: number; mood: string }> = ({ animationIntensity, noiseVolume, audioLevel, avgPercentChange, mood }) => {
+const VRTradingPitScene: React.FC<{
+  animationIntensity: number;
+  noiseVolume: number;
+  audioLevel: number;
+  avgPercentChange: number;
+  mood: string;
+  ambientAudioSrc: string;
+}> = ({ animationIntensity, noiseVolume, audioLevel, avgPercentChange, mood, ambientAudioSrc }) => {
   const meshRef = React.useRef<THREE.Mesh>(null);
   useFrame((state, delta) => {
     if (meshRef.current) {
+      // Rotate sphere based on intensity and add tilt based on avg change
       meshRef.current.rotation.y += delta * 0.5 * animationIntensity;
       meshRef.current.rotation.x = Math.sin(state.clock.getElapsedTime() * 0.5) * (animationIntensity * 0.2);
     }
@@ -153,19 +163,30 @@ const VRTradingPit: React.FC = () => {
     return () => newSocket.disconnect();
   }, []);
 
-  // Prepare chart data using fallback values
+  // Prepare chart data for bar chart, histogram, and pie chart
   const barData = [
     { name: 'Market Change', value: vrData ? vrData.avgPercentChange : 0 },
     { name: 'Noise Volume', value: vrData ? vrData.noiseVolume : 40 },
     { name: 'Avg Volume', value: vrData ? vrData.averageVolume : 0 }
   ];
+
   const histogramData = Array.from({ length: 7 }, (_, i) => ({
     name: `Bin ${i + 1}`,
     value: Math.floor(Math.random() * 100)
   }));
+
   const pieData = [
     { name: 'Mood', value: 1, mood: vrData ? vrData.crowdMood : 'neutral' }
   ];
+
+  // Choose ambient audio source based on crowd mood
+  const getAudioSource = (mood: string): string => {
+    const lower = mood.toLowerCase();
+    if (lower === 'panic') return panic;
+    if (lower === 'concerned') return sad;
+    if (lower === 'euphoric') return neutral;
+    return crowd;
+  };
 
   return (
     <motion.div
@@ -174,9 +195,9 @@ const VRTradingPit: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 1 }}
     >
-      {/* Info Section */}
+      {/* Info & Charts Section */}
       <motion.div
-        className="p-8 text-center bg-gray-700 bg-opacity-80 rounded-2xl shadow-2xl mb-8 max-w-2xl"
+        className="p-8 text-center bg-gray-700 bg-opacity-80 rounded-2xl shadow-2xl mb-8 max-w-3xl"
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.6 }}
@@ -187,7 +208,7 @@ const VRTradingPit: React.FC = () => {
         {error && <p className="text-red-400">{error}</p>}
         {vrData && (
           <motion.div
-            className="mb-6 space-y-3"
+            className="mb-6 space-y-4"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.5 }}
@@ -198,73 +219,70 @@ const VRTradingPit: React.FC = () => {
             <p className="text-2xl text-gray-200">{vrData.message}</p>
           </motion.div>
         )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4">
+          {/* Bar Chart */}
+          <motion.div
+            className="bg-white rounded-lg shadow-xl p-4"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            <h3 className="text-xl font-bold mb-2 text-gray-800">Market Metrics</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={barData}>
+                <XAxis dataKey="name" stroke="#333" />
+                <YAxis stroke="#333" />
+                <Tooltip />
+                <Bar dataKey="value" fill="#4A90E2" />
+              </BarChart>
+            </ResponsiveContainer>
+          </motion.div>
+          {/* Pie Chart for Mood */}
+          <motion.div
+            className="bg-white rounded-lg shadow-xl p-4 flex flex-col items-center"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+          >
+            <h3 className="text-xl font-bold mb-2 text-gray-800">Current Mood</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  label={({ payload }) => payload.mood}
+                >
+                  <Cell fill={vrData ? (vrData.crowdMood.toLowerCase() === 'panic' ? '#F44336' : vrData.crowdMood.toLowerCase() === 'concerned' ? '#FFC107' : '#4CAF50') : '#999'} />
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </motion.div>
+          {/* Histogram (Volume Distribution) */}
+          <motion.div
+            className="bg-white rounded-lg shadow-xl p-4"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+          >
+            <h3 className="text-xl font-bold mb-2 text-gray-800">Volume Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={histogramData}>
+                <XAxis dataKey="name" stroke="#333" />
+                <YAxis stroke="#333" />
+                <Tooltip />
+                <Bar dataKey="value" fill="#4A90E2" />
+              </BarChart>
+            </ResponsiveContainer>
+          </motion.div>
+        </div>
       </motion.div>
-
-      {/* Charts Section */}
-      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-        {/* Bar Chart */}
-        <motion.div
-          className="bg-white rounded-lg shadow-xl p-4"
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          <h3 className="text-xl font-bold mb-2 text-gray-800">Market Metrics</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={barData}>
-              <XAxis dataKey="name" stroke="#333" />
-              <YAxis stroke="#333" />
-              <Tooltip />
-              <Bar dataKey="value" fill="#4A90E2" />
-            </BarChart>
-          </ResponsiveContainer>
-        </motion.div>
-        {/* Pie Chart for Mood */}
-        <motion.div
-          className="bg-white rounded-lg shadow-xl p-4 flex flex-col items-center"
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-        >
-          <h3 className="text-xl font-bold mb-2 text-gray-800">Current Mood</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label={({ payload }) => payload.mood}
-              >
-                <Cell fill={vrData ? (vrData.crowdMood.toLowerCase() === 'panic' ? '#F44336' : vrData.crowdMood.toLowerCase() === 'concerned' ? '#FFC107' : '#4CAF50') : '#999'} />
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </motion.div>
-        {/* Histogram */}
-        <motion.div
-          className="bg-white rounded-lg shadow-xl p-4"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.5 }}
-        >
-          <h3 className="text-xl font-bold mb-2 text-gray-800">Volume Distribution</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={histogramData}>
-              <XAxis dataKey="name" stroke="#333" />
-              <YAxis stroke="#333" />
-              <Tooltip />
-              <Bar dataKey="value" fill="#4A90E2" />
-            </BarChart>
-          </ResponsiveContainer>
-        </motion.div>
-      </div>
-
       {/* 3D Scene Section with Ambient Audio */}
       <motion.div
-        className="h-[500px] w-full max-w-4xl rounded-2xl overflow-hidden shadow-2xl"
+        className="h-[500px] w-full max-w-4xl rounded-2xl overflow-hidden shadow-2xl mb-8"
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.7, duration: 0.5 }}
@@ -276,9 +294,12 @@ const VRTradingPit: React.FC = () => {
             audioLevel={vrData ? vrData.audioLevel : 0.4}
             avgPercentChange={vrData ? vrData.avgPercentChange : 0}
             mood={vrData ? vrData.crowdMood : 'neutral'}
+            ambientAudioSrc={vrData ? getAudioSource(vrData.crowdMood) : crowd}
           />
         </Canvas>
       </motion.div>
+      {/* TensorFlow Predictions Section */}
+      <TFPredictionsHoldings />
     </motion.div>
   );
 };
