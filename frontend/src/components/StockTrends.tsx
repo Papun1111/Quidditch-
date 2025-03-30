@@ -40,7 +40,7 @@ const StockTrends: React.FC = () => {
   useEffect(() => {
     const fetchTrends = async () => {
       try {
-        const res = await axios.get("https://zerodhaclonerepo.onrender.com/api/stock-trends");
+        const res = await axios.get("http://localhost:3000/api/stock-trends");
         setTrends(res.data);
         // Initially select all stocks
         setSelectedSymbols(res.data.map((stock: StockTrend) => stock.symbol));

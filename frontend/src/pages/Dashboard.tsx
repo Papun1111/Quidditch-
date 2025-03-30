@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FaWallet, FaSignOutAlt, FaBars, FaAngleDoubleLeft, FaAngleDoubleRight } from "react-icons/fa";
+import { FaWallet, FaSignOutAlt, FaAngleDoubleLeft, FaAngleDoubleRight } from "react-icons/fa";
 
 import Holdings from "../components/Holdings";
 import Positions from "../components/Positions";

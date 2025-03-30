@@ -15,7 +15,7 @@ const OrderForm: React.FC = () => {
     e.preventDefault();
     try {
       const res = await axios.post(
-        "https://zerodhaclonerepo.onrender.com/api/newOrder",
+        "http://localhost:3000/api/newOrder",
         { symbol, qty, mode },
         { headers: { Authorization: `Bearer ${token}` } }
       );

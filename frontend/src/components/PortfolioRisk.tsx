@@ -176,7 +176,7 @@ const PortfolioRisk: React.FC = () => {
   useEffect(() => {
     const fetchRisk = async () => {
       try {
-        const res = await axios.get<PortfolioRiskResponse>('https://zerodhaclonerepo.onrender.com/api/portfolio-risk', {
+        const res = await axios.get<PortfolioRiskResponse>('http://localhost:3000/api/portfolio-risk', {
           headers: { Authorization: `Bearer ${token}` },
         });
         // Log the received data for debugging
