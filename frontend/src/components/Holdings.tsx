@@ -68,7 +68,7 @@ const Holdings: React.FC = () => {
   useEffect(() => {
     const fetchHoldings = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/holdings", {
+        const res = await axios.get("https://zerodhaclonerepo.onrender.com/api/holdings", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setHoldings(res.data);

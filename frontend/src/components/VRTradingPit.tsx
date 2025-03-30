@@ -144,7 +144,7 @@ const VRTradingPit: React.FC = () => {
   useEffect(() => {
     const fetchVRData = async () => {
       try {
-        const res = await axios.get<VRPitData>('http://localhost:3000/api/vr-trading-pit');
+        const res = await axios.get<VRPitData>('https://zerodhaclonerepo.onrender.com/api/vr-trading-pit');
         setVrData(res.data);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Error fetching VR trading pit data');
@@ -155,7 +155,7 @@ const VRTradingPit: React.FC = () => {
 
   // Setup Socket.IO for live updates
   useEffect(() => {
-    const newSocket = io("http://localhost:3000");
+    const newSocket = io("https://zerodhaclonerepo.onrender.com");
     setSocket(newSocket);
     newSocket.on("vrData", (data: VRPitData) => {
       setVrData(data);

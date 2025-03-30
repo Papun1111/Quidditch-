@@ -23,7 +23,7 @@ const Positions: React.FC = () => {
   useEffect(() => {
     const fetchPositions = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/positions", {
+        const res = await axios.get("https://zerodhaclonerepo.onrender.com/api/positions", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setPositions(res.data);

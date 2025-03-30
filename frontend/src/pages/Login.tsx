@@ -14,7 +14,7 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:3000/api/login", { email, password });
+      const res = await axios.post("https://zerodhaclonerepo.onrender.com/api/login", { email, password });
       saveToken(res.data.token);
       navigate("/dashboard");
     } catch (err: any) {

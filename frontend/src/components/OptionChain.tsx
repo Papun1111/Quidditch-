@@ -32,7 +32,7 @@ const OptionChain: React.FC = () => {
     }
     setError('');
     try {
-      const res = await axios.get<OptionChainResponse>(`http://localhost:3000/api/option-chain/${symbol}`);
+      const res = await axios.get<OptionChainResponse>(`https://zerodhaclonerepo.onrender.com/api/option-chain/${symbol}`);
       setOptionChain(res.data.optionChain);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error fetching option chain');
