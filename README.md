@@ -1,4 +1,3 @@
-Below is an example README.md for your project. You can copy, paste, and modify it as needed:
 
 ---
 
@@ -238,5 +237,3 @@ For more information or contributions, please contact [gohanmohapatra@gmail.com]
 *Enjoy trading in a world where magic meets markets!* 
 
 ---
-
-This README uses badges and pills to highlight the key technologies and frameworks, provides a clear project structure, detailed installation instructions, and outlines features and future enhancements for an attractive and informative overview of your project.
