@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../components/AuthContext';
 import { motion } from 'framer-motion';
-
+import grindot from "../assets/grindotts.jpeg"
 const Login: React.FC = () => {
   const { saveToken } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -22,80 +22,188 @@ const Login: React.FC = () => {
     }
   };
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        duration: 0.8,
+        when: "beforeChildren",
+        staggerChildren: 0.2
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1,
+      transition: { duration: 0.5 }
+    }
+  };
+
   return (
-    <motion.div 
-      className="flex justify-center items-center min-h-screen bg-gradient-to-r from-gray-800 to-black"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8 }}
-    >
+    <div className="min-h-screen bg-gradient-to-r from-gray-800 to-black">
       <motion.div 
-        className="w-full max-w-md p-8 bg-gray-900 rounded shadow-lg"
-        initial={{ scale: 0.8, opacity: 0, y: -20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        className="flex flex-col lg:flex-row justify-center items-center min-h-screen w-full px-4"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
       >
-        <motion.h2 
-          className="text-2xl font-bold mb-6 text-center text-white"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
+        {/* Login Form Section */}
+        <motion.div 
+          className="w-full max-w-md p-8 bg-gray-900 rounded-lg shadow-lg lg:w-1/2 lg:mr-8 z-10"
+          variants={itemVariants}
         >
-          Login
-        </motion.h2>
-        {error && (
+          <motion.h2 
+            className="text-3xl font-bold mb-6 text-center text-white"
+            variants={itemVariants}
+          >
+            Welcome Back
+          </motion.h2>
+          
+          {error && (
+            <motion.div 
+              className="text-red-500 mb-4 p-3 bg-red-100 bg-opacity-10 rounded"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              {error}
+            </motion.div>
+          )}
+          
+          <form onSubmit={handleSubmit}>
+            <motion.div className="mb-4" variants={itemVariants}>
+              <label className="block mb-2 text-white">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-3 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-30 transition-all"
+                required
+              />
+            </motion.div>
+            
+            <motion.div className="mb-6" variants={itemVariants}>
+              <label className="block mb-2 text-white">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-3 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-30 transition-all"
+                required
+              />
+            </motion.div>
+            
+            <motion.button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-md font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              variants={itemVariants}
+            >
+              Sign In
+            </motion.button>
+          </form>
+          
           <motion.div 
-            className="text-red-500 mb-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
+            className="mt-6 text-center text-gray-400"
+            variants={itemVariants}
           >
-            {error}
+            <p>Don't have an account?{" "}
+              <Link to="/signup" className="text-blue-400 hover:underline transition-colors">
+                Sign Up
+              </Link>
+            </p>
+            <p className="mt-2">
+              <Link to="/forgot-password" className="text-gray-500 hover:text-gray-300 text-sm transition-colors">
+                Forgot your password?
+              </Link>
+            </p>
           </motion.div>
-        )}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block mb-1 text-white">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block mb-1 text-white">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-          <motion.button 
-            type="submit" 
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded focus:outline-none"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Login
-          </motion.button>
-        </form>
-        <motion.p 
-          className="mt-4 text-center text-gray-400"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
+        </motion.div>
+        
+        {/* Image Section */}
+        <motion.div 
+          className="hidden lg:block lg:w-1/2"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
         >
-          Don't have an account?{" "}
-          <Link to="/signup" className="text-blue-400 hover:underline">
-            Signup
-          </Link>
-        </motion.p>
+          <div className="relative w-full h-full min-h-full flex justify-center items-center">
+            {/* Background decorative elements */}
+            <motion.div
+              className="absolute w-64 h-64 bg-blue-500 rounded-full opacity-20 blur-xl"
+              animate={{ 
+                scale: [1, 1.2, 1],
+                opacity: [0.2, 0.3, 0.2]
+              }}
+              transition={{ 
+                duration: 8,
+                repeat: Infinity,
+                repeatType: "reverse"
+              }}
+              style={{ top: '20%', left: '10%' }}
+            />
+            <motion.div
+              className="absolute w-80 h-80 bg-purple-600 rounded-full opacity-20 blur-xl"
+              animate={{ 
+                scale: [1.2, 1, 1.2],
+                opacity: [0.2, 0.3, 0.2]
+              }}
+              transition={{ 
+                duration: 10,
+                repeat: Infinity,
+                repeatType: "reverse"
+              }}
+              style={{ bottom: '20%', right: '10%' }}
+            />
+            
+            {/* Main image */}
+            <motion.div 
+              className="relative z-10 w-4/5 max-w-md"
+              whileHover={{ y: -5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <img 
+                src={grindot} 
+                alt="Login visual" 
+                className="w-full h-auto rounded-lg shadow-xl" 
+              />
+              
+              {/* Floating elements around the image */}
+              <motion.div 
+                className="absolute -top-6 -left-6 bg-gradient-to-br from-blue-500 to-purple-600 w-12 h-12 rounded-lg shadow-lg"
+                animate={{ 
+                  y: [0, -10, 0],
+                  rotate: [0, 5, 0]
+                }}
+                transition={{ 
+                  duration: 4,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+              />
+              <motion.div 
+                className="absolute -bottom-4 -right-4 bg-gradient-to-tr from-cyan-400 to-blue-500 w-16 h-16 rounded-full shadow-lg"
+                animate={{ 
+                  y: [0, 10, 0],
+                  rotate: [0, -5, 0]
+                }}
+                transition={{ 
+                  duration: 5,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+              />
+            </motion.div>
+          </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };
 
