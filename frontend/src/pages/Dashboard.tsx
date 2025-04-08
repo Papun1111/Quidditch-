@@ -1,23 +1,27 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useContext, useRef, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FaWallet, FaSignOutAlt, FaAngleDoubleLeft, FaAngleDoubleRight } from "react-icons/fa";
+import {
+  FaBars,
+  FaTimes,
+  FaWallet,
+  FaSignOutAlt,
+} from "react-icons/fa";
 
 import Holdings from "../components/Holdings";
 import Positions from "../components/Positions";
 import OrderForm from "../components/OrderForm";
 import StockTrends from "../components/StockTrends";
-// TradingSummary import removed
 import TeamPerformance from "../components/TeamPerformance";
 import OptionChain from "../components/OptionChain";
 import PortfolioRisk from "../components/PortfolioRisk";
 import VRTradingPit from "../components/VRTradingPit";
 import { AuthContext } from "../components/AuthContext";
 
-// ---------------- GooeyNav (Sidebar variant) ----------------
+// -------------- GooeyNav Code --------------
 interface GooeyNavItem {
   label: string;
-  href: string;
+  href: string; // e.g., "#holdings"
 }
 
 interface GooeyNavProps {
@@ -28,7 +32,9 @@ interface GooeyNavProps {
   particleR?: number;
   timeVariance?: number;
   colors?: number[];
-  initialActiveIndex?: number;
+  // Now, instead of local state, we accept controlled props:
+  activeIndex: number;
+  onChangeIndex: (index: number) => void;
 }
 
 const GooeyNav: React.FC<GooeyNavProps> = ({
@@ -39,13 +45,13 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
   particleR = 100,
   timeVariance = 300,
   colors = [1, 2, 3, 1, 2, 3, 1, 4],
-  initialActiveIndex = 0,
+  activeIndex,
+  onChangeIndex,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLUListElement>(null);
   const filterRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
-  const [activeIndex, setActiveIndex] = useState<number>(initialActiveIndex);
 
   const noise = (n = 1) => n / 2 - Math.random() * n;
 
@@ -66,15 +72,17 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     };
   };
 
-  const makeParticles = (element: HTMLElement) => {
-    const d: [number, number] = particleDistances;
+  const makeParticles = useCallback((element: HTMLElement) => {
+    const d = particleDistances;
     const r = particleR;
     const bubbleTime = animationTime * 2 + timeVariance;
     element.style.setProperty("--time", `${bubbleTime}ms`);
+
     for (let i = 0; i < particleCount; i++) {
       const t = animationTime * 2 + noise(timeVariance * 2);
       const p = createParticle(i, t, d, r);
       element.classList.remove("active");
+
       setTimeout(() => {
         const particle = document.createElement("span");
         const point = document.createElement("span");
@@ -87,12 +95,15 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
         particle.style.setProperty("--scale", `${p.scale}`);
         particle.style.setProperty("--color", `var(--color-${p.color}, white)`);
         particle.style.setProperty("--rotate", `${p.rotate}deg`);
+
         point.classList.add("point");
         particle.appendChild(point);
         element.appendChild(particle);
+
         requestAnimationFrame(() => {
           element.classList.add("active");
         });
+
         setTimeout(() => {
           try {
             element.removeChild(particle);
@@ -100,72 +111,96 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
         }, t);
       }, 30);
     }
-  };
+  }, [
+    animationTime,
+    particleCount,
+    particleDistances,
+    particleR,
+    timeVariance,
+    noise,
+    createParticle,
+  ]);
 
-  const updateEffectPosition = (element: HTMLElement) => {
+  const updateEffectPosition = useCallback((element: HTMLElement) => {
     if (!containerRef.current || !filterRef.current || !textRef.current) return;
+
     const containerRect = containerRef.current.getBoundingClientRect();
     const pos = element.getBoundingClientRect();
+
     const styles = {
       left: `${pos.x - containerRect.x}px`,
       top: `${pos.y - containerRect.y}px`,
       width: `${pos.width}px`,
       height: `${pos.height}px`,
-    };
+    } as React.CSSProperties;
+
     Object.assign(filterRef.current.style, styles);
     Object.assign(textRef.current.style, styles);
     textRef.current.innerText = element.innerText;
-  };
+  }, []);
 
   const handleClick = (e: React.MouseEvent<HTMLLIElement>, index: number) => {
-    const liEl = e.currentTarget;
     if (activeIndex === index) return;
-    setActiveIndex(index);
+    onChangeIndex(index);
+
+    const liEl = e.currentTarget;
     updateEffectPosition(liEl);
 
+    // Clear out any existing particles
     if (filterRef.current) {
       const particles = filterRef.current.querySelectorAll(".particle");
       particles.forEach((p) => filterRef.current!.removeChild(p));
     }
+
     if (textRef.current) {
       textRef.current.classList.remove("active");
+      // force reflow
       void textRef.current.offsetWidth;
       textRef.current.classList.add("active");
     }
+
     if (filterRef.current) {
       makeParticles(filterRef.current);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>, index: number) => {
+  // For accessibility (keyboard nav)
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLAnchorElement>,
+    index: number
+  ) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       const liEl = e.currentTarget.parentElement;
-      if (liEl) {
-        handleClick({ currentTarget: liEl } as React.MouseEvent<HTMLLIElement>, index);
-      }
+      if (liEl) handleClick({ currentTarget: liEl } as React.MouseEvent<HTMLLIElement>, index);
     }
   };
 
   useEffect(() => {
     if (!navRef.current || !containerRef.current) return;
-    const activeLi = navRef.current.querySelectorAll("li")[activeIndex] as HTMLElement;
-    if (activeLi) {
-      updateEffectPosition(activeLi);
+    const liElements = navRef.current.querySelectorAll("li");
+    const currentActiveLi = liElements[activeIndex] as HTMLElement;
+
+    if (currentActiveLi) {
+      updateEffectPosition(currentActiveLi);
       textRef.current?.classList.add("active");
     }
+
+    // Reposition on container resize
     const resizeObserver = new ResizeObserver(() => {
-      const currentActiveLi = navRef.current?.querySelectorAll("li")[activeIndex] as HTMLElement;
-      if (currentActiveLi) {
-        updateEffectPosition(currentActiveLi);
+      const liElements2 = navRef.current?.querySelectorAll("li");
+      if (liElements2 && liElements2[activeIndex]) {
+        updateEffectPosition(liElements2[activeIndex] as HTMLElement);
       }
     });
-    resizeObserver.observe(containerRef.current);
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
+
     return () => resizeObserver.disconnect();
-  }, [activeIndex]);
+  }, [activeIndex, updateEffectPosition]);
 
   return (
     <>
+      {/* Gooey Effect Styles */}
       <style>
         {`
           :root {
@@ -207,7 +242,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
             z-index: -1;
             border-radius: 9999px;
           }
-          .effect.active::after {
+          .effect.filter.active::after {
             animation: pill 0.3s ease both;
           }
           @keyframes pill {
@@ -283,15 +318,15 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
               opacity: 0;
             }
           }
-          li.active {
+          ul li.active {
             color: black;
             text-shadow: none;
           }
-          li.active::after {
+          ul li.active::after {
             opacity: 1;
             transform: scale(1);
           }
-          li::after {
+          ul li::after {
             content: "";
             position: absolute;
             inset: 0;
@@ -304,6 +339,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
           }
         `}
       </style>
+
       <div className="relative" ref={containerRef}>
         <nav
           className="flex flex-col gap-4 relative"
@@ -321,7 +357,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
               <li
                 key={index}
                 className={`py-2 px-4 rounded relative cursor-pointer transition duration-300 ease hover:bg-gray-700 ${
-                  activeIndex === index ? "bg-gray-800" : ""
+                  activeIndex === index ? "bg-gray-800 active" : ""
                 }`}
                 onClick={(e) => handleClick(e, index)}
               >
@@ -336,6 +372,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
             ))}
           </ul>
         </nav>
+        {/* The Gooey highlight and text overlays */}
         <span className="effect filter" ref={filterRef} />
         <span className="effect text" ref={textRef} />
       </div>
@@ -343,16 +380,17 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
   );
 };
 
-// ---------------- Sidebar Dashboard Component ----------------
-
+// -------------- Dashboard Code --------------
 const Dashboard: React.FC = () => {
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<string>("holdings");
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  // Which tab is active, e.g. "holdings"
+  const [activeTab, setActiveTab] = useState("holdings");
+  // Mobile sidebar open state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Navigation items for sidebar
+  // Our nav items
   const navItems: GooeyNavItem[] = [
     { label: "Holdings", href: "#holdings" },
     { label: "Positions", href: "#positions" },
@@ -364,25 +402,33 @@ const Dashboard: React.FC = () => {
     { label: "VR Trading Pit", href: "#vrtradingpt" },
   ];
 
-  // Listen for hash changes to update active tab
+  // Update activeTab when URL hash changes
   useEffect(() => {
-    const updateActiveTab = () => {
-      const hash = window.location.hash;
+    const handleHashChange = () => {
+      const { hash } = window.location;
       if (hash) {
-        setActiveTab(hash.slice(1));
+        setActiveTab(hash.slice(1)); // remove '#'
       }
     };
-    window.addEventListener("hashchange", updateActiveTab);
-    updateActiveTab();
-    return () => window.removeEventListener("hashchange", updateActiveTab);
+    window.addEventListener("hashchange", handleHashChange);
+    // Check at mount
+    handleHashChange();
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  // Determine activeIndex from activeTab
+  const activeIndex = navItems.findIndex((item) => item.href.slice(1) === activeTab);
+  // If not found, default to 0
+  const computedActiveIndex = activeIndex >= 0 ? activeIndex : 0;
+
+  // When GooeyNav changes index, we set the hash
+  const handleChangeIndex = (index: number) => {
+    const newHref = navItems[index].href;
+    window.location.hash = newHref;
   };
 
-  const renderTab = () => {
+  // Decide which content to render
+  const renderTabContent = () => {
     switch (activeTab) {
       case "holdings":
         return <Holdings />;
@@ -401,44 +447,137 @@ const Dashboard: React.FC = () => {
       case "vrtradingpt":
         return <VRTradingPit />;
       default:
-        return null;
+        return <Holdings />;
     }
   };
 
+  // Logout
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  // Sidebar variants for small-screen slide-in
+  const sidebarVariants = {
+    hidden: { x: "-100%" },
+    visible: { x: 0 },
+  };
+
   return (
-    <div className="flex min-h-screen bg-gradient-to-r from-gray-800 to-black text-white">
-      {/* Sidebar */}
-      <motion.div
-        className={`bg-gray-900 p-4 flex flex-col transition-all duration-300 ${
-          isSidebarOpen ? "w-64" : "w-16"
-        }`}
-      >
-        <div className="flex items-center justify-between">
-          {isSidebarOpen && (
-            <h1 className="text-xl font-bold flex items-center">
-              <FaWallet className="mr-2" /> Quidditch Dashboard
-            </h1>
-          )}
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="text-white focus:outline-none"
-          >
-            {isSidebarOpen ? <FaAngleDoubleLeft size={20} /> : <FaAngleDoubleRight size={20} />}
-          </button>
-        </div>
-        <div className="mt-6">
-          <GooeyNav items={navItems} initialActiveIndex={0} />
+    <div className="flex flex-col min-h-screen bg-gray-800 text-white">
+      {/* -- TOP NAVBAR for small screens -- */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-gray-900">
+        <div className="flex items-center">
+          <FaWallet className="text-xl mr-2" />
+          <span className="font-bold text-lg">Quidditch Dashboard</span>
         </div>
         <button
-          onClick={handleLogout}
-          className="mt-auto p-2 rounded hover:bg-red-600 transition"
+          onClick={() => setMobileMenuOpen(true)}
+          className="focus:outline-none"
+          aria-label="Open menu"
         >
-          <FaSignOutAlt size={20} title="Logout" />
+          <FaBars className="text-2xl" />
         </button>
-      </motion.div>
-      {/* Main Content */}
-      <div className="flex-1 p-4">
-        {renderTab()}
+      </div>
+
+      {/* -- MAIN LAYOUT: SIDEBAR (MD+) + CONTENT -- */}
+      <div className="flex flex-1">
+        {/* Sidebar: Always visible on md+ */}
+        <div className="hidden md:flex md:flex-col w-60 bg-gray-900">
+          <div className="flex items-center justify-between p-4 border-b border-gray-700">
+            <div className="flex items-center">
+              <FaWallet className="text-xl mr-2" />
+              <span className="font-bold text-lg whitespace-nowrap">Dashboard</span>
+            </div>
+          </div>
+
+          {/* Our GooeyNav inside the sidebar */}
+          <div className="mt-4 px-2 flex-1">
+            <GooeyNav
+              items={navItems}
+              activeIndex={computedActiveIndex}
+              onChangeIndex={handleChangeIndex}
+            />
+          </div>
+
+          <div className="p-4 border-t border-gray-700">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
+            >
+              <FaSignOutAlt className="mr-2" />
+              Logout
+            </button>
+          </div>
+        </div>
+
+        {/* MOBILE SIDEBAR with framer-motion (md:hidden) */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.aside
+              key="mobileSidebar"
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={sidebarVariants}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 flex flex-col md:hidden"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                <div className="flex items-center">
+                  <FaWallet className="text-xl mr-2" />
+                  <span className="font-bold text-lg">Dashboard</span>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="focus:outline-none"
+                  aria-label="Close menu"
+                >
+                  <FaTimes className="text-2xl" />
+                </button>
+              </div>
+
+              {/* GooeyNav for mobile */}
+              <div className="mt-4 px-2 flex-1">
+                <GooeyNav
+                  items={navItems}
+                  activeIndex={computedActiveIndex}
+                  onChangeIndex={(index) => {
+                    handleChangeIndex(index);
+                    setMobileMenuOpen(false);
+                  }}
+                />
+              </div>
+
+              <div className="p-4 border-t border-gray-700">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
+                >
+                  <FaSignOutAlt className="mr-2" />
+                  Logout
+                </button>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
+
+        {/* MAIN CONTENT AREA */}
+        <main className="flex-1 p-4 overflow-y-auto">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            transition={{ duration: 0.3 }}
+            className="w-full"
+          >
+            {renderTabContent()}
+          </motion.div>
+        </main>
       </div>
     </div>
   );

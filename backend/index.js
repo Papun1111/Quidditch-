@@ -30,59 +30,60 @@ app.use(bodyParser.json());
 
 /* ----------------------------------------------------------------------------
    Demo Data, Historical Data & Risk Factors
+   (All U.S. companies now)
 ----------------------------------------------------------------------------- */
 const demoStockData = {
-  "RELIANCE": { price: 2400, volume: 20000, percent_change: 0.5 },
-  "TCS": { price: 3500, volume: 15000, percent_change: 0.7 },
-  "INFY": { price: 1500, volume: 25000, percent_change: -0.3 },
-  "HDFC": { price: 3000, volume: 12000, percent_change: 0.2 },
-  "ICICIBANK": { price: 650, volume: 30000, percent_change: -0.1 },
-  "IBM": { price: 130, volume: 3000000, percent_change: 0.5 },
-  "AAPL": { price: 150, volume: 5000000, percent_change: 0.7 },
-  "MSFT": { price: 280, volume: 2000000, percent_change: -0.3 },
+  "IBM":   { price: 130, volume: 3000000, percent_change: 0.5 },
+  "AAPL":  { price: 150, volume: 5000000, percent_change: 0.7 },
+  "MSFT":  { price: 280, volume: 2000000, percent_change: -0.3 },
   "GOOGL": { price: 2700, volume: 1000000, percent_change: 0.2 },
-  "AMZN": { price: 3400, volume: 1500000, percent_change: -0.1 },
-  "TSLA": { price: 700, volume: 4000000, percent_change: 1.2 },
-  "NFLX": { price: 550, volume: 1800000, percent_change: -0.5 },
-  "FB": { price: 330, volume: 2200000, percent_change: 0.8 },
-  "NVDA": { price: 200, volume: 2500000, percent_change: 2.1 },
-  "ORCL": { price: 90, volume: 1500000, percent_change: -0.3 }
+  "AMZN":  { price: 3400, volume: 1500000, percent_change: -0.1 },
+  "TSLA":  { price: 700, volume: 4000000, percent_change: 1.2 },
+  "NFLX":  { price: 550, volume: 1800000, percent_change: -0.5 },
+  "META":  { price: 330, volume: 2200000, percent_change: 0.8 },
+  "NVDA":  { price: 200, volume: 2500000, percent_change: 2.1 },
+  "ORCL":  { price: 90, volume: 1500000, percent_change: -0.3 },
+  "WMT":   { price: 140, volume: 3000000, percent_change: 0.3 },
+  "HD":    { price: 300, volume: 1000000, percent_change: -0.2 },
+  "JNJ":   { price: 170, volume: 900000, percent_change: 0.1 },
+  "PFE":   { price: 50, volume: 2000000, percent_change: -0.4 },
+  "BAC":   { price: 40, volume: 2500000, percent_change: 0.6 },
 };
 
 const historicalData = {
-  "RELIANCE": [2350, 2380, 2400, 2420, 2400],
-  "TCS": [3450, 3470, 3500, 3520, 3500],
-  "INFY": [1520, 1510, 1500, 1490, 1500],
-  "HDFC": [2980, 2990, 3000, 3010, 3000],
-  "ICICIBANK": [655, 652, 650, 648, 650],
-  "IBM": [128, 129, 130, 131, 130],
-  "AAPL": [148, 149, 150, 151, 150],
-  "MSFT": [278, 279, 280, 281, 280],
+  "IBM":   [128, 129, 130, 131, 130],
+  "AAPL":  [148, 149, 150, 151, 150],
+  "MSFT":  [278, 279, 280, 281, 280],
   "GOOGL": [2690, 2700, 2700, 2710, 2700],
-  "AMZN": [3380, 3390, 3400, 3410, 3400],
-  "TSLA": [680, 690, 700, 710, 700],
-  "NFLX": [545, 547, 550, 553, 550],
-  "FB": [325, 327, 330, 332, 330],
-  "NVDA": [195, 197, 200, 202, 200],
-  "ORCL": [88, 89, 90, 91, 90]
+  "AMZN":  [3380, 3390, 3400, 3410, 3400],
+  "TSLA":  [680, 690, 700, 710, 700],
+  "NFLX":  [545, 547, 550, 553, 550],
+  "META":  [325, 327, 330, 332, 330],
+  "NVDA":  [195, 197, 200, 202, 200],
+  "ORCL":  [88, 89, 90, 91, 90],
+  "WMT":   [136, 138, 140, 142, 140],
+  "HD":    [295, 298, 300, 305, 300],
+  "JNJ":   [168, 169, 170, 171, 170],
+  "PFE":   [48, 49, 50, 51, 50],
+  "BAC":   [38, 39, 40, 41, 40],
 };
 
 const riskFactors = {
-  "RELIANCE": 0.3,
-  "TCS": 0.4,
-  "INFY": 0.5,
-  "HDFC": 0.2,
-  "ICICIBANK": 0.6,
-  "IBM": 0.3,
-  "AAPL": 0.4,
-  "MSFT": 0.5,
+  "IBM":   0.3,
+  "AAPL":  0.4,
+  "MSFT":  0.5,
   "GOOGL": 0.2,
-  "AMZN": 0.6,
-  "TSLA": 0.8,
-  "NFLX": 0.7,
-  "FB": 0.5,
-  "NVDA": 0.9,
-  "ORCL": 0.3
+  "AMZN":  0.6,
+  "TSLA":  0.8,
+  "NFLX":  0.7,
+  "META":  0.5,
+  "NVDA":  0.9,
+  "ORCL":  0.3,
+  "WMT":   0.4,
+  "HD":    0.5,
+  "JNJ":   0.3,
+  "PFE":   0.4,
+  "BAC":   0.5,
 };
 
 /* ----------------------------------------------------------------------------
@@ -110,6 +111,209 @@ const getCurrentApiProvider = () => {
     return API_PROVIDERS.YAHOO_FINANCE;
   }
   return API_PROVIDERS.MOCK;
+};
+
+/* ----------------------------------------------------------------------------
+   Helpers to Fetch Various Alpha Vantage Data
+----------------------------------------------------------------------------- */
+async function fetchAlphaVantageDailyAdjusted(symbol) {
+  const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+  if (!apiKey) return null;
+
+  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&apikey=${apiKey}`;
+  try {
+    alphaVantageCallsToday++;
+    const response = await axios.get(url);
+    const data = response.data;
+
+    if (!data["Time Series (Daily)"]) {
+      return null;
+    }
+
+    const dailySeries = data["Time Series (Daily)"];
+    const sortedDates = Object.keys(dailySeries).sort(); // oldest to newest
+    const last30Dates = sortedDates.slice(-30);
+    const dailyCloses = last30Dates.map(d => parseFloat(dailySeries[d]["4. close"]));
+
+    const latestClose = dailyCloses[dailyCloses.length - 1];
+    let percentChange = 0;
+    if (dailyCloses.length > 1) {
+      const prevClose = dailyCloses[dailyCloses.length - 2];
+      percentChange = ((latestClose - prevClose) / prevClose) * 100;
+    }
+
+    return {
+      price: latestClose,
+      volume: 0, 
+      percent_change: parseFloat(percentChange.toFixed(2)),
+      historicalPrices: dailyCloses
+    };
+  } catch (err) {
+    console.error(`Error fetching daily-adjusted data for ${symbol}:`, err.message);
+    return null;
+  }
+}
+
+async function fetchAlphaVantageHistoricalOptions(symbol) {
+  const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+  if (!apiKey) return null;
+
+  const date = '2017-11-15';
+  const url = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&date=${date}&apikey=${apiKey}`;
+  
+  try {
+    alphaVantageCallsToday++;
+    const response = await axios.get(url);
+    const data = response.data;
+
+    if (!data || !data.data) {
+      return null;
+    }
+
+    const chainFromAPI = data.data; 
+    const optionChain = chainFromAPI.map(item => {
+      const attackIntensity = parseFloat(
+        (((item.premium || 0) * (item.openInterest || 0)) / 100000).toFixed(2)
+      );
+      return {
+        strike: item.strike,
+        expiry: item.expiry || date,
+        premium: item.premium || 0,
+        openInterest: item.openInterest || 0,
+        attackIntensity
+      };
+    });
+
+    return optionChain;
+  } catch (error) {
+    console.error('Alpha Vantage Historical Options Error:', error.message);
+    return null;
+  }
+}
+
+async function fetchAlphaVantageNewsSentiment(tickers = "COIN,CRYPTO:BTC,FOREX:USD") {
+  const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+  if (!apiKey) return null;
+
+  const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${tickers}&time_from=20220410T0130&limit=1000&apikey=${apiKey}`;
+  try {
+    alphaVantageCallsToday++;
+    const response = await axios.get(url);
+    const data = response.data;
+    if (!data || !data.feed) {
+      return null;
+    }
+    return data.feed; 
+  } catch (err) {
+    console.error("Alpha Vantage News & Sentiment Error:", err.message);
+    return null;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Fetch Alpha Vantage Stock Data (Intraday or Daily Adjusted) with fallback
+----------------------------------------------------------------------------- */
+const fetchAlphaVantageData = async (symbol) => {
+  const apiKey = process.env.ALPHAVANTAGE_API_KEY;
+  if (!apiKey) {
+    console.error('Alpha Vantage API key not found');
+    return null;
+  }
+
+  const dailyAdjustedData = await fetchAlphaVantageDailyAdjusted(symbol);
+  if (dailyAdjustedData) {
+    return dailyAdjustedData;
+  }
+
+  // fallback to 5-min intraday
+  try {
+    alphaVantageCallsToday++;
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY`
+      + `&symbol=${symbol}&interval=5min&outputsize=full&apikey=${apiKey}`;
+    
+    const response = await axios.get(url);
+    const data = response.data;
+
+    if (!data["Time Series (5min)"]) {
+      console.error(`Missing intraday data for ${symbol}.`);
+      return null;
+    }
+
+    const timeSeries = data["Time Series (5min)"];
+    const allTimestamps = Object.keys(timeSeries).sort();
+    if (allTimestamps.length === 0) return null;
+
+    const latestTimestamp = allTimestamps[allTimestamps.length - 1];
+    const latestClose = parseFloat(timeSeries[latestTimestamp]["4. close"]);
+
+    const dailyData = {};
+    for (const timestamp of allTimestamps) {
+      const datePart = timestamp.split(' ')[0];
+      if (!dailyData[datePart]) dailyData[datePart] = [];
+      dailyData[datePart].push(parseFloat(timeSeries[timestamp]["4. close"]));
+    }
+
+    const dates = Object.keys(dailyData).sort();
+    const last30Dates = dates.slice(-30);
+
+    const dailyAverages = last30Dates.map(date => {
+      const prices = dailyData[date];
+      const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+      return parseFloat(avg.toFixed(4));
+    });
+
+    let percentChange = 0;
+    if (dailyAverages.length > 1) {
+      const lastAvg = dailyAverages[dailyAverages.length - 1];
+      const secondLast = dailyAverages[dailyAverages.length - 2];
+      percentChange = ((lastAvg - secondLast) / secondLast) * 100;
+    }
+
+    return {
+      price: latestClose,
+      volume: 0,
+      percent_change: parseFloat(percentChange.toFixed(2)),
+      historicalPrices: dailyAverages
+    };
+  } catch (err) {
+    console.error(`Error fetching intraday data for ${symbol}:`, err.message);
+    return null;
+  }
+};
+
+/* ----------------------------------------------------------------------------
+   Main Stock Data Fetcher with Caching and Fallback
+----------------------------------------------------------------------------- */
+const fetchStockData = async (symbol) => {
+  const cacheKey = `stock_${symbol}`;
+  const cachedData = stockCache.get(cacheKey);
+  if (cachedData) return cachedData;
+  
+  const provider = getCurrentApiProvider();
+  let stockData = null;
+
+  switch (provider) {
+    case API_PROVIDERS.ALPHA_VANTAGE:
+      stockData = await fetchAlphaVantageData(symbol);
+      break;
+    case API_PROVIDERS.YAHOO_FINANCE:
+      // If you had a fetchYahooFinanceData, call it here
+      console.log(`Yahoo Finance API would be called for ${symbol}`);
+      break;
+    default:
+      stockData = getMockStockData(symbol);
+      break;
+  }
+
+  if (!stockData) {
+    console.log(`Falling back to mock data for ${symbol}`);
+    stockData = getMockStockData(symbol);
+  }
+
+  if (stockData) {
+    stockCache.set(cacheKey, stockData);
+  }
+  return stockData;
 };
 
 /* ----------------------------------------------------------------------------
@@ -143,129 +347,6 @@ const getMockStockData = (symbol) => {
 };
 
 /* ----------------------------------------------------------------------------
-   NEW: Fetch Alpha Vantage Stock Data (Intraday) to get near real-time close 
-   plus daily averages for the last ~30 days
------------------------------------------------------------------------------ */
-const fetchAlphaVantageData = async (symbol) => {
-  const apiKey = process.env.ALPHAVANTAGE_API_KEY;
-  if (!apiKey) {
-    console.error('Alpha Vantage API key not found');
-    return null;
-  }
-
-  // We'll fetch the 5-min intraday data, full size
-  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY` +
-              `&symbol=${symbol}&interval=5min&outputsize=full&apikey=${apiKey}`;
-  try {
-    alphaVantageCallsToday++;
-    const response = await axios.get(url);
-    const data = response.data;
-
-    if (data.Information && data.Information.includes('rate limit')) {
-      console.warn('Alpha Vantage rate limit reached:', data.Information);
-      return null;
-    }
-    if (!data["Time Series (5min)"]) {
-      console.error(`Missing time series data for ${symbol}:`, data);
-      return null;
-    }
-
-    // Intraday 5-min data
-    const timeSeries = data["Time Series (5min)"];
-    const allTimestamps = Object.keys(timeSeries).sort();
-    if (allTimestamps.length === 0) {
-      console.error(`No intraday data for ${symbol}`);
-      return null;
-    }
-
-    // Latest close: near real-time
-    const latestTimestamp = allTimestamps[allTimestamps.length - 1];
-    const latestClose = parseFloat(timeSeries[latestTimestamp]["4. close"]);
-
-    // Group by date => daily average
-    const dailyData = {};
-    for (const timestamp of allTimestamps) {
-      const datePart = timestamp.split(' ')[0]; // "YYYY-MM-DD"
-      if (!dailyData[datePart]) dailyData[datePart] = [];
-      dailyData[datePart].push(parseFloat(timeSeries[timestamp]["4. close"]));
-    }
-
-    // Sort by date, slice the last 30
-    const dates = Object.keys(dailyData).sort();
-    const last30Dates = dates.slice(-30);
-
-    const dailyAverages = last30Dates.map(date => {
-      const prices = dailyData[date];
-      const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length;
-      return parseFloat(avg.toFixed(4));
-    });
-
-    // Calculate a simple day-over-day % change using the last 2 daily averages
-    let percentChange = 0;
-    if (dailyAverages.length > 1) {
-      const lastAvg = dailyAverages[dailyAverages.length - 1];
-      const secondLast = dailyAverages[dailyAverages.length - 2];
-      percentChange = ((lastAvg - secondLast) / secondLast) * 100;
-    }
-
-    return {
-      // "Real-time" price from the last intraday bar
-      price: latestClose,
-      volume: 0, // or parse from intraday if you want
-      percent_change: parseFloat(percentChange.toFixed(2)),
-      historicalPrices: dailyAverages
-    };
-  } catch (err) {
-    console.error(`Error fetching Alpha Vantage data for ${symbol}:`, err.message);
-    return null;
-  }
-};
-
-/* ----------------------------------------------------------------------------
-   Placeholder: Fetch Yahoo Finance Stock Data
------------------------------------------------------------------------------ */
-const fetchYahooFinanceData = async (symbol) => {
-  console.log(`Yahoo Finance API would be called for ${symbol}`);
-  return null;
-};
-
-/* ----------------------------------------------------------------------------
-   Main Stock Data Fetcher with Caching and Fallbacks
------------------------------------------------------------------------------ */
-const fetchStockData = async (symbol) => {
-  const cacheKey = `stock_${symbol}`;
-  const cachedData = stockCache.get(cacheKey);
-  if (cachedData) return cachedData;
-  
-  const provider = getCurrentApiProvider();
-  let stockData = null;
-
-  switch (provider) {
-    case API_PROVIDERS.ALPHA_VANTAGE:
-      stockData = await fetchAlphaVantageData(symbol);
-      break;
-    case API_PROVIDERS.YAHOO_FINANCE:
-      stockData = await fetchYahooFinanceData(symbol);
-      break;
-    default:
-      stockData = getMockStockData(symbol);
-      break;
-  }
-
-  // If we didn't get anything from real APIs, fallback to mock
-  if (!stockData) {
-    console.log(`Falling back to mock data for ${symbol}`);
-    stockData = getMockStockData(symbol);
-  }
-
-  // Cache and return
-  if (stockData) {
-    stockCache.set(cacheKey, stockData);
-  }
-  return stockData;
-};
-
-/* ----------------------------------------------------------------------------
    Authentication Middleware
 ----------------------------------------------------------------------------- */
 const authenticateToken = (req, res, next) => {
@@ -294,6 +375,7 @@ app.post('/api/signup', async (req, res) => {
     if (existingUser) return res.status(400).json({ message: 'User already exists' });
     const newUser = new User({ username, name, email, password });
     await newUser.save();
+    console.log(newUser);
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
     res.status(201).json({ token, message: 'User created successfully' });
   } catch (error) {
@@ -332,7 +414,7 @@ app.get('/api/holdings', authenticateToken, async (req, res) => {
 });
 
 /* ----------------------------------------------------------------------------
-   Positions Endpoint (Uses real-time price now from fetchStockData)
+   Positions Endpoint (Uses real-time price from fetchStockData)
 ----------------------------------------------------------------------------- */
 app.get('/api/positions', authenticateToken, async (req, res) => {
   try {
@@ -350,9 +432,7 @@ app.get('/api/positions', authenticateToken, async (req, res) => {
           console.error(`Could not fetch data for ${symbol}`);
           return null;
         }
-        // Use real-time price if available
         const currentPrice = parseFloat(data.price);
-        // You can also keep dayChangePercent from data.percent_change if you want
         const dayChangePercent = parseFloat(data.percent_change);
 
         return {
@@ -416,7 +496,6 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
       }
       let holding = await HoldingsModel.findOne({ userId: req.user.id, symbol });
       if (holding) {
-        // Update average cost
         const totalCost = holding.quantity * holding.averagePrice + cost;
         const newQuantity = holding.quantity + quantity;
         holding.quantity = newQuantity;
@@ -473,10 +552,11 @@ app.post('/api/newOrder', authenticateToken, async (req, res) => {
 ----------------------------------------------------------------------------- */
 app.get('/api/stock-trends', async (req, res) => {
   try {
+    // Updated to American symbols only
     const symbols = [
-      "RELIANCE", "TCS", "INFY", "HDFC", "ICICIBANK",
       "IBM", "AAPL", "MSFT", "GOOGL", "AMZN",
-      "TSLA", "NFLX", "FB", "NVDA", "ORCL"
+      "TSLA", "NFLX", "META", "NVDA", "ORCL",
+      "WMT", "HD", "JNJ", "PFE", "BAC"
     ];
     const trendData = await Promise.all(
       symbols.map(async (symbol) => {
@@ -503,7 +583,7 @@ app.get('/api/stock-trends', async (req, res) => {
 });
 
 /* ----------------------------------------------------------------------------
-   Trading Summary Endpoint (Enhanced with Dummy Data Fallback)
+   Trading Summary Endpoint
 ----------------------------------------------------------------------------- */
 app.get('/api/trading-summary', authenticateToken, async (req, res) => {
   try {
@@ -523,7 +603,7 @@ app.get('/api/trading-summary', authenticateToken, async (req, res) => {
       }
     ]);
     
-    // If no actual summary in DB, fall back to dummy data
+    // If no actual summary in DB, fallback to dummy data
     if (!summary || summary.length === 0) {
       summary = Object.keys(demoStockData).map(symbol => {
         const totalBuyQty = Math.floor(Math.random() * 90 + 10);
@@ -587,20 +667,22 @@ app.get('/api/all-stocks', async (req, res) => {
 });
 
 /* ----------------------------------------------------------------------------
-   Team Performance Endpoint (Enhanced)
+   Team Performance Endpoint
+   Updated to reference only U.S. symbols
 ----------------------------------------------------------------------------- */
 app.get('/api/team-performance', async (req, res) => {
+  // Example “teams” mapped to specific U.S. stocks
   const teamMapping = {
-    "Gryffindor": "AAPL",
-    "Slytherin": "TSLA",
-    "Hufflepuff": "MSFT",
-    "Ravenclaw": "GOOGL",
-    "Durmstrang": "AMZN",
-    "Phoenix": "NFLX",
-    "Shadow": "FB",
-    "Mystic": "NVDA",
-    "Titan": "ORCL",
-    "Oracle": "IBM"
+    "Gryffindor":  "AAPL",
+    "Slytherin":   "TSLA",
+    "Hufflepuff":  "MSFT",
+    "Ravenclaw":   "GOOGL",
+    "Durmstrang":  "AMZN",
+    "Phoenix":     "NFLX",
+    "Shadow":      "META",
+    "Mystic":      "NVDA",
+    "Titan":       "ORCL",
+    "Oracle":      "IBM",
   };
 
   try {
@@ -627,7 +709,7 @@ app.get('/api/team-performance', async (req, res) => {
 });
 
 /* ----------------------------------------------------------------------------
-   Option Chain Endpoint (Enhanced)
+   Option Chain Endpoint
 ----------------------------------------------------------------------------- */
 app.get('/api/option-chain/:symbol', async (req, res) => {
   const { symbol } = req.params;
@@ -642,36 +724,38 @@ app.get('/api/option-chain/:symbol', async (req, res) => {
       return res.status(400).json({ message: 'Invalid base price for option chain calculation' });
     }
 
-    const numContracts = 7;
-    const strikes = [];
-    const lowerBound = basePrice * 0.85;
-    const upperBound = basePrice * 1.15;
-    const interval = (upperBound - lowerBound) / (numContracts - 1);
+    let optionChain = await fetchAlphaVantageHistoricalOptions(symbol);
 
-    for (let i = 0; i < numContracts; i++) {
-      strikes.push(Math.round(lowerBound + i * interval));
+    if (!optionChain) {
+      const numContracts = 7;
+      const lowerBound = basePrice * 0.85;
+      const upperBound = basePrice * 1.15;
+      const interval = (upperBound - lowerBound) / (numContracts - 1);
+
+      optionChain = [];
+      for (let i = 0; i < numContracts; i++) {
+        const strike = Math.round(lowerBound + i * interval);
+        const impliedVol = Math.random() * 0.25 + 0.15;
+        const premium = parseFloat(
+          (Math.abs(basePrice - strike) * impliedVol * 0.5 + (Math.random() * 2)).toFixed(2)
+        );
+        const openInterest = Math.floor(Math.random() * 1900 + 100);
+        const attackIntensity = parseFloat(
+          ((premium * openInterest * impliedVol) / 100000).toFixed(2)
+        );
+        const expiry = new Date(
+          Date.now() + ((i + 1) * 30 * 24 * 60 * 60 * 1000 / numContracts)
+        ).toISOString().split('T')[0];
+        
+        optionChain.push({
+          strike,
+          expiry,
+          premium,
+          openInterest,
+          attackIntensity
+        });
+      }
     }
-
-    const optionChain = strikes.map((strike, i) => {
-      const impliedVol = Math.random() * 0.25 + 0.15;
-      const premium = parseFloat(
-        (Math.abs(basePrice - strike) * impliedVol * 0.5 + (Math.random() * 2)).toFixed(2)
-      );
-      const openInterest = Math.floor(Math.random() * 1900 + 100);
-      const attackIntensity = parseFloat(
-        ((premium * openInterest * impliedVol) / 100000).toFixed(2)
-      );
-      const expiry = new Date(
-        Date.now() + ((i + 1) * 30 * 24 * 60 * 60 * 1000 / numContracts)
-      ).toISOString().split('T')[0];
-      return {
-        strike,
-        expiry,
-        premium,
-        openInterest,
-        attackIntensity
-      };
-    });
 
     res.json({ symbol, optionChain });
   } catch (error) {
@@ -747,32 +831,24 @@ app.get('/api/tf-holdings-predictions', authenticateToken, async (req, res) => {
     const allPredictions = [];
     for (const holding of holdings) {
       const symbol = holding.symbol;
-
-      // 1. Fetch or build historical price data
-      // We'll fetch the "full intraday" for daily average, as we did in fetchAlphaVantageData
       let data = await fetchAlphaVantageData(symbol);
 
       let dailyPrices = [];
       if (data && data.historicalPrices) {
         dailyPrices = data.historicalPrices;
       } else {
-        // fallback to the local "historicalData" or mock
         dailyPrices = historicalData[symbol] || [demoStockData[symbol].price];
       }
 
-      // Make sure at least 10 data points exist
       while (dailyPrices.length < 10) {
         dailyPrices.unshift(dailyPrices[0]);
       }
 
-      // Use last 30 days (or as many as available)
       const prices = dailyPrices.slice(-30);
 
-      // Prepare TF input (xs) and output (ys)
       const xs = tf.tensor1d(prices.map((_, i) => i));
       const ys = tf.tensor1d(prices);
 
-      // Simple TF model
       const model = tf.sequential();
       model.add(tf.layers.dense({ inputShape: [1], units: 32, activation: 'relu' }));
       model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
@@ -784,8 +860,7 @@ app.get('/api/tf-holdings-predictions', authenticateToken, async (req, res) => {
         verbose: 0
       });
 
-      // Predict next day’s price
-      const nextIndex = prices.length; 
+      const nextIndex = prices.length;
       const predictionTensor = model.predict(tf.tensor2d([nextIndex], [1, 1]));
       const predictedPrice = predictionTensor.dataSync()[0];
 
@@ -800,13 +875,11 @@ app.get('/api/tf-holdings-predictions', authenticateToken, async (req, res) => {
       });
     }
 
-    // Sort by predictedChange ascending => identify "worst" (negative) up to 2
     allPredictions.sort((a, b) => a.predictedChange - b.predictedChange);
     const sellCandidates = allPredictions.filter(p => p.predictedChange < 0);
     const toSell = sellCandidates.slice(0, 2);
     const sellSymbols = toSell.map(p => p.symbol);
 
-    // Build final recommendations
     const finalPredictions = allPredictions.map((p) => {
       const { symbol, currentPrice, predictedPrice, predictedChange } = p;
       let recommendation = "Hold";
@@ -814,15 +887,12 @@ app.get('/api/tf-holdings-predictions', authenticateToken, async (req, res) => {
 
       if (sellSymbols.includes(symbol)) {
         recommendation = "Sell Some";
-        description += `We expect a ${predictedChange.toFixed(2)}% drop. 
-          This holding is among the worst predicted. Consider selling a portion.`;
+        description += `We expect a ${predictedChange.toFixed(2)}% drop. Consider selling a portion.`;
       } else if (predictedChange > 2) {
         recommendation = "Buy More";
-        description += `Model predicts a strong gain of ${predictedChange.toFixed(2)}%. 
-          Consider increasing your position.`;
+        description += `Model predicts a strong gain of ${predictedChange.toFixed(2)}%. Consider increasing position.`;
       } else {
-        description += `Predicted change of ${predictedChange.toFixed(2)}%. 
-          Not severe enough to justify a move. Keep holding.`;
+        description += `Predicted change of ${predictedChange.toFixed(2)}%. Not severe enough to justify a move. Keep holding.`;
       }
 
       return {
@@ -861,7 +931,7 @@ app.get('/api/status', (req, res) => {
 });
 
 /* ----------------------------------------------------------------------------
-   VR Trading Pit Endpoint with WebSocket Broadcasting and Enhanced Effects
+   VR Trading Pit Logic with integrated NEWS_SENTIMENT
 ----------------------------------------------------------------------------- */
 async function getVRTradingPitData() {
   try {
@@ -875,26 +945,42 @@ async function getVRTradingPitData() {
           : demoStockData[symbol].percent_change
       };
     }));
+
     const validData = marketData.filter(
       item => item.percent_change !== null && !isNaN(item.percent_change)
     );
     const totalPercentChange = validData.reduce(
       (sum, item) => sum + item.percent_change, 0
     );
-    const avgPercentChange = totalPercentChange / validData.length;
+    const avgPercentChange = totalPercentChange / (validData.length || 1);
+
+    let newsSentiment = await fetchAlphaVantageNewsSentiment();
+    let sentimentScore = 0;
+    if (newsSentiment && newsSentiment.length > 0) {
+      let sumScore = 0, count = 0;
+      for (const article of newsSentiment) {
+        if (article.overall_sentiment_score) {
+          sumScore += article.overall_sentiment_score;
+          count++;
+        }
+      }
+      sentimentScore = count > 0 ? (sumScore / count) : 0;
+    }
 
     let crowdMood = "neutral";
     let noiseVolume = 40;
-    if (avgPercentChange > 1) {
+    const combinedFactor = avgPercentChange + sentimentScore * 5;
+
+    if (combinedFactor > 1) {
       crowdMood = "euphoric";
       noiseVolume = 80;
-    } else if (avgPercentChange > 0.1) {
+    } else if (combinedFactor > 0.1) {
       crowdMood = "optimistic";
       noiseVolume = 60;
-    } else if (avgPercentChange < -1) {
+    } else if (combinedFactor < -1) {
       crowdMood = "panic";
       noiseVolume = 70;
-    } else if (avgPercentChange < -0.1) {
+    } else if (combinedFactor < -0.1) {
       crowdMood = "concerned";
       noiseVolume = 50;
     }
@@ -907,9 +993,8 @@ async function getVRTradingPitData() {
     const mean = avgPercentChange;
     const variance = validData.reduce(
       (acc, item) => acc + Math.pow(item.percent_change - mean, 2), 0
-    ) / validData.length;
+    ) / (validData.length || 1);
     const marketVolatility = Math.sqrt(variance);
-
     const animationIntensity = Math.min(Math.abs(avgPercentChange) / 5, 1);
     const audioLevel = noiseVolume / 100;
 

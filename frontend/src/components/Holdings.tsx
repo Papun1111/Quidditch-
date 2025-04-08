@@ -1,4 +1,11 @@
-import React, { useRef, useState, useEffect, useContext } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+  RefObject
+} from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import {
@@ -15,6 +22,17 @@ interface Holding {
   symbol: string;
   quantity: number;
   averagePrice: number;
+}
+
+interface Card3DProps {
+  children: ReactNode;
+  depth?: number;
+}
+
+interface AnalyticsData {
+  isPositive: boolean;
+  percentChange: string;  // e.g. "2.50"
+  sparklinePath: string;  // e.g. "M0,10 Q10,5 20,12 ..."
 }
 
 // --- Animated Container Variants (Staggered Fade-In) ---
@@ -109,19 +127,20 @@ const textVariants: Variants = {
   }
 };
 
-// --- Custom 3D Card Component ---
-const Card3D = ({ children, depth = 40 }) => {
+// --- Card3D Component ---
+const Card3D: React.FC<Card3DProps> = ({ children, depth = 40 }) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  
+
+  // Convert cursor movement to 3D rotation
   const rotateX = useTransform(y, [-100, 100], [10, -10]);
   const rotateY = useTransform(x, [-100, 100], [-10, 10]);
-  
+
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    
+
     x.set(e.clientX - centerX);
     y.set(e.clientY - centerY);
   };
@@ -144,6 +163,7 @@ const Card3D = ({ children, depth = 40 }) => {
       onMouseLeave={handleMouseLeave}
       className="relative w-full perspective-1000"
     >
+      {/* The translateZ uses the depth prop */}
       <div style={{ transform: `translateZ(${depth}px)` }}>
         {children}
       </div>
@@ -151,26 +171,34 @@ const Card3D = ({ children, depth = 40 }) => {
   );
 };
 
-// --- Spotlight Effect Hook ---
-function useSpotlight(ref) {
+// --- useSpotlight Hook ---
+function useSpotlight(ref: RefObject<HTMLDivElement>) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [opacity, setOpacity] = useState(0);
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: MouseEvent) => {
       if (!ref.current) return;
-      
+
       const rect = ref.current.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      setPosition({ x, y });
-      setOpacity(0.15);
+      const xPos = e.clientX - rect.left;
+      const yPos = e.clientY - rect.top;
+
+      // Only set spotlight if the mouse is within the container
+      if (
+        xPos >= 0 && 
+        yPos >= 0 &&
+        xPos <= rect.width &&
+        yPos <= rect.height
+      ) {
+        setPosition({ x: xPos, y: yPos });
+        setOpacity(0.15);
+      } else {
+        setOpacity(0);
+      }
     };
 
-    const handleMouseLeave = () => {
-      setOpacity(0);
-    };
+    const handleMouseLeave = () => setOpacity(0);
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseleave", handleMouseLeave);
@@ -185,29 +213,34 @@ function useSpotlight(ref) {
 }
 
 // --- Animated Number Component ---
-const AnimatedNumber = ({ value, fixed = 2 }) => {
+interface AnimatedNumberProps {
+  value: number;
+  fixed?: number;
+}
+
+const AnimatedNumber: React.FC<AnimatedNumberProps> = ({ value, fixed = 2 }) => {
   const [displayValue, setDisplayValue] = useState(0);
-  
+
   useEffect(() => {
-    let startTime;
-    let frameId;
-    
-    const animateValue = (timestamp) => {
-      if (!startTime) startTime = timestamp;
+    let startTime: number | undefined;
+    let frameId: number;
+
+    const animateValue = (timestamp: number) => {
+      if (startTime === undefined) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / 600, 1);
-      
+
       setDisplayValue(progress * value);
-      
+
       if (progress < 1) {
         frameId = requestAnimationFrame(animateValue);
       }
     };
-    
+
     frameId = requestAnimationFrame(animateValue);
-    
+
     return () => cancelAnimationFrame(frameId);
   }, [value]);
-  
+
   return <span>${displayValue.toFixed(fixed)}</span>;
 };
 
@@ -215,61 +248,85 @@ const AnimatedNumber = ({ value, fixed = 2 }) => {
 const Holdings: React.FC = () => {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const { token } = useContext(AuthContext);
-  const mainContainerRef = useRef(null);
+
+  const mainContainerRef = useRef<HTMLDivElement>(null);
   const spotlight = useSpotlight(mainContainerRef);
-  
-  // Generate stable percentages and trends for each symbol
-  const getStableAnalytics = () => {
-    const stableData = {};
-    ["AAPL", "GOOGL", "MSFT", "AMZN", "META", "NFLX", "TSLA", "NVDA"].forEach((symbol, index) => {
-      // Use a deterministic approach based on symbol
-      const hash = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+  // Pre-generate stable percentages and trends for known symbols
+  const getStableAnalytics = (): Record<string, AnalyticsData> => {
+    const stableData: Record<string, AnalyticsData> = {};
+    const symbols = ["AAPL", "GOOGL", "MSFT", "AMZN", "META", "NFLX", "TSLA", "NVDA"];
+
+    symbols.forEach((symbol) => {
+      const hash = symbol
+        .split("")
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
       const isPositive = hash % 2 === 0;
-      const percentChange = ((hash % 10) / 2).toFixed(2);
-      
+      const percent = ((hash % 10) / 2).toFixed(2);
+
       stableData[symbol] = {
         isPositive,
-        percentChange,
-        // Generate a stable path for the sparkline
-        sparklinePath: `M0,10 Q10,${isPositive ? '15' : '5'} 20,${isPositive ? '7' : '12'} T40,${isPositive ? '5' : '15'} T60,${isPositive ? '8' : '12'} T80,${isPositive ? '4' : '16'} T100,${isPositive ? '2' : '18'}`
+        percentChange: percent,
+        sparklinePath: `M0,10 Q10,${isPositive ? "15" : "5"} 20,${
+          isPositive ? "7" : "12"
+        } T40,${isPositive ? "5" : "15"} T60,${
+          isPositive ? "8" : "12"
+        } T80,${isPositive ? "4" : "16"} T100,${
+          isPositive ? "2" : "18"
+        }`
       };
     });
     return stableData;
   };
-  
+
   const stableAnalytics = getStableAnalytics();
 
   useEffect(() => {
     const fetchHoldings = async () => {
       setIsLoading(true);
+      setError(null);
+
       try {
-        // Simulate a delay for loading effect
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Simulate a small network delay
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
         const res = await axios.get("http://localhost:3000/api/holdings", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setHoldings(res.data);
       } catch (err) {
         console.error(err);
+        setError("Failed to load holdings. Please try again.");
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchHoldings();
   }, [token]);
 
-  // Render function for a single holding with enhanced 3D effects
+  // Render function for a single holding with 3D Card
   const renderHolding = (holding: Holding, index: number) => {
-    // Use the stable analytics data for this symbol
-    const analytics = stableAnalytics[holding.symbol] || {
-      isPositive: index % 2 === 0,
-      percentChange: (2.5).toFixed(2),
-      sparklinePath: `M0,10 Q10,${index % 2 === 0 ? '15' : '5'} 20,${index % 2 === 0 ? '7' : '12'} T40,${index % 2 === 0 ? '5' : '15'} T60,${index % 2 === 0 ? '8' : '12'} T80,${index % 2 === 0 ? '4' : '16'} T100,${index % 2 === 0 ? '2' : '18'}`
-    };
-    
+    const analytics =
+      stableAnalytics[holding.symbol] ??
+      ({
+        isPositive: index % 2 === 0,
+        percentChange: (2.5).toFixed(2),
+        sparklinePath: `M0,10 Q10,${index % 2 === 0 ? "15" : "5"} 20,${
+          index % 2 === 0 ? "7" : "12"
+        } T40,${index % 2 === 0 ? "5" : "15"} T60,${
+          index % 2 === 0 ? "8" : "12"
+        } T80,${index % 2 === 0 ? "4" : "16"} T100,${
+          index % 2 === 0 ? "2" : "18"
+        }`
+      } as AnalyticsData);
+
     return (
-      <Card3D>
+      <Card3D depth={40} key={holding.symbol}>
         <motion.div
           className="p-5 mb-4 rounded-xl shadow-xl overflow-hidden relative"
           style={{
@@ -280,13 +337,15 @@ const Holdings: React.FC = () => {
           layoutId={`holding-${holding.symbol}`}
         >
           {/* Background gradient accent */}
-          <div 
+          <div
             className="absolute inset-0 opacity-30 -z-10"
             style={{
-              background: `radial-gradient(circle at ${index % 3 * 50}% 50%, rgba(120, 80, 255, 0.3), transparent 50%)`
+              background: `radial-gradient(circle at ${
+                (index % 3) * 50
+              }% 50%, rgba(120, 80, 255, 0.3), transparent 50%)`
             }}
           />
-          
+
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <div className="flex items-center">
@@ -294,17 +353,22 @@ const Holdings: React.FC = () => {
                   {holding.symbol}
                 </span>
                 <motion.div
-                  className={`text-xs px-2 py-1 rounded-full ${analytics.isPositive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}
+                  className={`text-xs px-2 py-1 rounded-full ${
+                    analytics.isPositive
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-red-500/20 text-red-400"
+                  }`}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
                 >
-                  {analytics.isPositive ? '+' : '-'}{analytics.percentChange}%
+                  {analytics.isPositive ? "+" : "-"}
+                  {analytics.percentChange}%
                 </motion.div>
               </div>
               <span className="text-gray-400 text-sm mt-1">Stock</span>
             </div>
-            
+
             <motion.div
               className="text-right"
               initial={{ opacity: 0, x: 20 }}
@@ -319,8 +383,8 @@ const Holdings: React.FC = () => {
               </div>
             </motion.div>
           </div>
-          
-          {/* Stable mini sparkline chart */}
+
+          {/* Sparkline chart */}
           <div className="mt-4 h-8">
             <svg width="100%" height="100%" viewBox="0 0 100 20">
               <motion.path
@@ -339,17 +403,17 @@ const Holdings: React.FC = () => {
     );
   };
 
-  // Loading animation
+  // Loader animation
   const loaderVariants: Variants = {
     initial: { rotate: 0 },
-    animate: { 
+    animate: {
       rotate: 360,
-      transition: { 
-        duration: 1.5, 
-        repeat: Infinity, 
-        ease: "linear" 
-      }
-    }
+      transition: {
+        duration: 1.5,
+        repeat: Infinity,
+        ease: "linear",
+      },
+    },
   };
 
   return (
@@ -359,59 +423,57 @@ const Holdings: React.FC = () => {
       animate="visible"
       variants={gradientVariants}
       style={{
-        background: "linear-gradient(-45deg, #0f172a, #1e293b, #312e81, #4f46e5)",
+        background:
+          "linear-gradient(-45deg, #0f172a, #1e293b, #312e81, #4f46e5)",
         backgroundSize: "400% 400%",
       }}
       ref={mainContainerRef}
     >
-      {/* Animated particles in background */}
+      {/* Animated floating particles in BG */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(15)].map((_, index) => (
           <motion.div
             key={index}
             className="absolute w-6 h-6 rounded-full bg-white opacity-10"
-            initial={{ 
-              x: Math.random() * window.innerWidth, 
+            initial={{
+              x: Math.random() * window.innerWidth,
               y: Math.random() * window.innerHeight,
-              scale: Math.random() * 0.5 + 0.5
+              scale: Math.random() * 0.5 + 0.5,
             }}
-            animate={{ 
+            animate={{
               y: [null, Math.random() * window.innerHeight],
-              x: [null, Math.random() * window.innerWidth], 
+              x: [null, Math.random() * window.innerWidth],
             }}
-            transition={{ 
+            transition={{
               duration: Math.random() * 20 + 15,
               repeat: Infinity,
               repeatType: "mirror",
-              ease: "linear"
+              ease: "linear",
             }}
           />
         ))}
       </div>
-      
+
       {/* Spotlight effect */}
-      <div 
+      <div
         className="absolute pointer-events-none"
         style={{
-          background: "radial-gradient(circle at center, rgba(255, 255, 255, 0.15), transparent 25%)",
+          background:
+            "radial-gradient(circle at center, rgba(255, 255, 255, 0.15), transparent 25%)",
           width: "600px",
           height: "600px",
           borderRadius: "50%",
-          transform: `translate(${spotlight.position.x - 300}px, ${spotlight.position.y - 300}px)`,
+          transform: `translate(${spotlight.position.x - 300}px, ${
+            spotlight.position.y - 300
+          }px)`,
           opacity: spotlight.opacity,
           transition: "opacity 0.2s ease",
         }}
       />
 
       {/* Title with animated icon */}
-      <motion.div 
-        className="text-center mb-10"
-        variants={textVariants}
-      >
-        <motion.div
-          className="inline-block mb-3"
-          variants={floatingIconVariants}
-        >
+      <motion.div className="text-center mb-10" variants={textVariants}>
+        <motion.div className="inline-block mb-3" variants={floatingIconVariants}>
           <div className="text-5xl">📊</div>
         </motion.div>
         <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
@@ -434,13 +496,24 @@ const Holdings: React.FC = () => {
       >
         {isLoading ? (
           <div className="flex flex-col items-center justify-center p-16">
-            <motion.div 
+            <motion.div
               className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
               variants={loaderVariants}
               initial="initial"
               animate="animate"
             />
             <p className="text-blue-200 mt-4">Loading your portfolio...</p>
+          </div>
+        ) : error ? (
+          <div
+            className="p-6 text-center rounded-xl"
+            style={{
+              background: "rgba(15, 23, 42, 0.6)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(148, 163, 184, 0.1)",
+            }}
+          >
+            <p className="text-red-300">{error}</p>
           </div>
         ) : (
           <div
@@ -453,11 +526,7 @@ const Holdings: React.FC = () => {
           >
             <AnimatePresence>
               {holdings.map((holding, index) => (
-                <motion.div 
-                  key={holding.symbol}
-                  variants={itemVariants}
-                  custom={index}
-                >
+                <motion.div key={holding.symbol} variants={itemVariants} custom={index}>
                   {renderHolding(holding, index)}
                 </motion.div>
               ))}
