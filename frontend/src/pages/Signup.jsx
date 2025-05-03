@@ -16,7 +16,7 @@ function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("http://localhost:3000/api/signup", { username, name, email, password });
+      const res = await axios.post("https://zerodhaclonerepo.onrender.com/api/signup", { username, name, email, password });
       // Auto-login after signup: store token and navigate to dashboard
       saveToken(res.data.token);
       navigate("/dashboard");

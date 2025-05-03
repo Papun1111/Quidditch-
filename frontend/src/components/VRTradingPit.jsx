@@ -259,7 +259,7 @@ function VRTradingPit() {
 
   // Initial fetch
   useEffect(() => {
-    axios.get('http://localhost:3000/api/vr-trading-pit')
+    axios.get('https://zerodhaclonerepo.onrender.com/api/vr-trading-pit')
       .then(res => {
         setVrData(res.data);
         setHistoricalData(generateHistoricalData(res.data.avgPercentChange));

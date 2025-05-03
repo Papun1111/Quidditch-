@@ -173,7 +173,7 @@ function Positions() {
       setError(null);
       try {
         await new Promise(r => setTimeout(r, 800));
-        const res = await axios.get("http://localhost:3000/api/positions", {
+        const res = await axios.get("https://zerodhaclonerepo.onrender.com/api/positions", {
           headers: { Authorization: `Bearer ${token}` }
         });
         setPositions(res.data);

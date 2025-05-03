@@ -48,7 +48,7 @@ function StockTrends() {
   useEffect(() => {
     async function fetchTrends() {
       try {
-        const res = await axios.get('http://localhost:3000/api/stock-trends');
+        const res = await axios.get('https://zerodhaclonerepo.onrender.com/api/stock-trends');
         setTrends(res.data);
         setSelectedSymbols(res.data.map(stock => stock.symbol));
       } catch (err) {

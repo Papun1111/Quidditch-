@@ -188,7 +188,7 @@ function Holdings() {
       setError(null);
       try {
         await new Promise((r) => setTimeout(r, 800));
-        const res = await axios.get("http://localhost:3000/api/holdings", {
+        const res = await axios.get("https://zerodhaclonerepo.onrender.com/api/holdings", {
           headers: { Authorization: `Bearer ${token}` }
         });
         setHoldings(res.data);

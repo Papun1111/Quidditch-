@@ -194,7 +194,7 @@ function TeamPerformanceComponent() {
   useEffect(() => {
     async function fetchPerformance() {
       try {
-        const res = await axios.get('http://localhost:3000/api/team-performance');
+        const res = await axios.get('https://zerodhaclonerepo.onrender.com/api/team-performance');
         setData(res.data);
       } catch (err) {
         setError(err.response?.data?.message || 'Error fetching team performance');

@@ -38,7 +38,7 @@ function OrderForm() {
     e.preventDefault();
     try {
       const res = await axios.post(
-        "http://localhost:3000/api/newOrder",
+        "https://zerodhaclonerepo.onrender.com/api/newOrder",
         { symbol, qty, mode },
         { headers: { Authorization: `Bearer ${token}` } }
       );

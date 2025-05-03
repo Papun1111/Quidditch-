@@ -139,7 +139,7 @@ function PortfolioRisk() {
   useEffect(() => {
     async function fetchRisk() {
       try {
-        const res = await axios.get('http://localhost:3000/api/portfolio-risk', {
+        const res = await axios.get('https://zerodhaclonerepo.onrender.com/api/portfolio-risk', {
           headers: { Authorization: `Bearer ${token}` }
         });
         console.log('Risk data received:', res.data);

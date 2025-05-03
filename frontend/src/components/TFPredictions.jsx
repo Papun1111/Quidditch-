@@ -11,7 +11,7 @@ function TFPredictionsHoldings() {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          "http://localhost:3000/api/tf-holdings-predictions",
+          "https://zerodhaclonerepo.onrender.com/api/tf-holdings-predictions",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
