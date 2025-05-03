@@ -7,23 +7,10 @@ import { FaLayerGroup } from 'react-icons/fa';
 
 Chart.register(ArcElement, Tooltip, Legend);
 
-interface OptionContract {
-  strike: number;
-  expiry: string;
-  premium: number;
-  openInterest: number;
-  attackIntensity: number;
-}
-
-interface OptionChainResponse {
-  symbol: string;
-  optionChain: OptionContract[];
-}
-
-const OptionChain: React.FC = () => {
-  const [symbol, setSymbol] = useState<string>('');
-  const [optionChain, setOptionChain] = useState<OptionContract[]>([]);
-  const [error, setError] = useState<string>('');
+function OptionChain() {
+  const [symbol, setSymbol] = useState('');
+  const [optionChain, setOptionChain] = useState([]);
+  const [error, setError] = useState('');
 
   const handleFetch = async () => {
     if (!symbol) {
@@ -32,36 +19,27 @@ const OptionChain: React.FC = () => {
     }
     setError('');
     try {
-      const res = await axios.get<OptionChainResponse>(`http://localhost:3000/api/option-chain/${symbol}`);
+      const res = await axios.get(`http://localhost:3000/api/option-chain/${symbol}`);
       setOptionChain(res.data.optionChain);
-    } catch (err: any) {
+    } catch (err) {
       setError(err.response?.data?.message || 'Error fetching option chain');
     }
   };
 
-  // Prepare data for the pie chart (open interest distribution)
   const pieData = {
-    labels: optionChain.map(contract => `Strike ${contract.strike}`),
+    labels: optionChain.map(c => `Strike ${c.strike}`),
     datasets: [
       {
         label: 'Open Interest',
-        data: optionChain.map(contract => contract.openInterest),
+        data: optionChain.map(c => c.openInterest),
         backgroundColor: [
-          '#FF6384',
-          '#36A2EB',
-          '#FFCE56',
-          '#4BC0C0',
-          '#9966FF',
-          '#FF9F40',
+          '#FF6384', '#36A2EB', '#FFCE56',
+          '#4BC0C0', '#9966FF', '#FF9F40',
           '#66FF66'
         ],
         hoverBackgroundColor: [
-          '#FF6384AA',
-          '#36A2EBAA',
-          '#FFCE56AA',
-          '#4BC0C0AA',
-          '#9966FFAA',
-          '#FF9F40AA',
+          '#FF6384AA', '#36A2EBAA', '#FFCE56AA',
+          '#4BC0C0AA', '#9966FFAA', '#FF9F40AA',
           '#66FF66AA'
         ],
       },
@@ -83,7 +61,7 @@ const OptionChain: React.FC = () => {
         <input
           type="text"
           value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
+          onChange={e => setSymbol(e.target.value)}
           className="w-full sm:w-1/3 p-2 border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
           placeholder="e.g., AAPL"
         />
@@ -134,6 +112,6 @@ const OptionChain: React.FC = () => {
       )}
     </div>
   );
-};
+}
 
 export default OptionChain;

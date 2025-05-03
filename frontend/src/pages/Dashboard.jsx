@@ -19,25 +19,7 @@ import VRTradingPit from "../components/VRTradingPit";
 import { AuthContext } from "../components/AuthContext";
 
 // -------------- GooeyNav Code --------------
-interface GooeyNavItem {
-  label: string;
-  href: string; // e.g., "#holdings"
-}
-
-interface GooeyNavProps {
-  items: GooeyNavItem[];
-  animationTime?: number;
-  particleCount?: number;
-  particleDistances?: [number, number];
-  particleR?: number;
-  timeVariance?: number;
-  colors?: number[];
-  // Now, instead of local state, we accept controlled props:
-  activeIndex: number;
-  onChangeIndex: (index: number) => void;
-}
-
-const GooeyNav: React.FC<GooeyNavProps> = ({
+const GooeyNav = ({
   items,
   animationTime = 600,
   particleCount = 15,
@@ -48,19 +30,19 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
   activeIndex,
   onChangeIndex,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const navRef = useRef<HTMLUListElement>(null);
-  const filterRef = useRef<HTMLSpanElement>(null);
-  const textRef = useRef<HTMLSpanElement>(null);
+  const containerRef = useRef(null);
+  const navRef = useRef(null);
+  const filterRef = useRef(null);
+  const textRef = useRef(null);
 
   const noise = (n = 1) => n / 2 - Math.random() * n;
 
-  const getXY = (distance: number, pointIndex: number, totalPoints: number): [number, number] => {
+  const getXY = (distance, pointIndex, totalPoints) => {
     const angle = ((360 + noise(8)) / totalPoints) * pointIndex * (Math.PI / 180);
     return [distance * Math.cos(angle), distance * Math.sin(angle)];
   };
 
-  const createParticle = (i: number, t: number, d: [number, number], r: number) => {
+  const createParticle = (i, t, d, r) => {
     let rotate = noise(r / 10);
     return {
       start: getXY(d[0], particleCount - i, particleCount),
@@ -72,7 +54,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     };
   };
 
-  const makeParticles = useCallback((element: HTMLElement) => {
+  const makeParticles = useCallback((element) => {
     const d = particleDistances;
     const r = particleR;
     const bubbleTime = animationTime * 2 + timeVariance;
@@ -117,11 +99,10 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     particleDistances,
     particleR,
     timeVariance,
-    noise,
-    createParticle,
+    colors,
   ]);
 
-  const updateEffectPosition = useCallback((element: HTMLElement) => {
+  const updateEffectPosition = useCallback((element) => {
     if (!containerRef.current || !filterRef.current || !textRef.current) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
@@ -132,14 +113,14 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
       top: `${pos.y - containerRect.y}px`,
       width: `${pos.width}px`,
       height: `${pos.height}px`,
-    } as React.CSSProperties;
+    };
 
     Object.assign(filterRef.current.style, styles);
     Object.assign(textRef.current.style, styles);
     textRef.current.innerText = element.innerText;
   }, []);
 
-  const handleClick = (e: React.MouseEvent<HTMLLIElement>, index: number) => {
+  const handleClick = (e, index) => {
     if (activeIndex === index) return;
     onChangeIndex(index);
 
@@ -149,7 +130,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     // Clear out any existing particles
     if (filterRef.current) {
       const particles = filterRef.current.querySelectorAll(".particle");
-      particles.forEach((p) => filterRef.current!.removeChild(p));
+      particles.forEach((p) => filterRef.current.removeChild(p));
     }
 
     if (textRef.current) {
@@ -165,21 +146,18 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
   };
 
   // For accessibility (keyboard nav)
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLAnchorElement>,
-    index: number
-  ) => {
+  const handleKeyDown = (e, index) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       const liEl = e.currentTarget.parentElement;
-      if (liEl) handleClick({ currentTarget: liEl } as React.MouseEvent<HTMLLIElement>, index);
+      if (liEl) handleClick({ currentTarget: liEl }, index);
     }
   };
 
   useEffect(() => {
     if (!navRef.current || !containerRef.current) return;
     const liElements = navRef.current.querySelectorAll("li");
-    const currentActiveLi = liElements[activeIndex] as HTMLElement;
+    const currentActiveLi = liElements[activeIndex];
 
     if (currentActiveLi) {
       updateEffectPosition(currentActiveLi);
@@ -190,7 +168,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
     const resizeObserver = new ResizeObserver(() => {
       const liElements2 = navRef.current?.querySelectorAll("li");
       if (liElements2 && liElements2[activeIndex]) {
-        updateEffectPosition(liElements2[activeIndex] as HTMLElement);
+        updateEffectPosition(liElements2[activeIndex]);
       }
     });
     if (containerRef.current) resizeObserver.observe(containerRef.current);
@@ -381,7 +359,7 @@ const GooeyNav: React.FC<GooeyNavProps> = ({
 };
 
 // -------------- Dashboard Code --------------
-const Dashboard: React.FC = () => {
+const Dashboard = () => {
   const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -391,7 +369,7 @@ const Dashboard: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Our nav items
-  const navItems: GooeyNavItem[] = [
+  const navItems = [
     { label: "Holdings", href: "#holdings" },
     { label: "Positions", href: "#positions" },
     { label: "New Order", href: "#newOrder" },
@@ -422,7 +400,7 @@ const Dashboard: React.FC = () => {
   const computedActiveIndex = activeIndex >= 0 ? activeIndex : 0;
 
   // When GooeyNav changes index, we set the hash
-  const handleChangeIndex = (index: number) => {
+  const handleChangeIndex = (index) => {
     const newHref = navItems[index].href;
     window.location.hash = newHref;
   };

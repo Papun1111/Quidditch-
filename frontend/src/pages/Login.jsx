@@ -1,28 +1,28 @@
-import React, { useState, useContext, FormEvent } from 'react';
+import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../components/AuthContext';
 import { motion } from 'framer-motion';
-import grindot from "../assets/grindotts.jpeg"
-const Login: React.FC = () => {
+import grindot from "../assets/grindotts.jpeg";
+
+function Login() {
   const { saveToken } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [error, setError] = useState<string>("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const res = await axios.post("http://localhost:3000/api/login", { email, password });
       saveToken(res.data.token);
       navigate("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     }
   };
 
-  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { 
@@ -134,7 +134,6 @@ const Login: React.FC = () => {
           transition={{ duration: 0.8, delay: 0.3 }}
         >
           <div className="relative w-full h-full min-h-full flex justify-center items-center">
-            {/* Background decorative elements */}
             <motion.div
               className="absolute w-64 h-64 bg-blue-500 rounded-full opacity-20 blur-xl"
               animate={{ 
@@ -174,7 +173,6 @@ const Login: React.FC = () => {
                 className="w-full h-auto rounded-lg shadow-xl" 
               />
               
-              {/* Floating elements around the image */}
               <motion.div 
                 className="absolute -top-6 -left-6 bg-gradient-to-br from-blue-500 to-purple-600 w-12 h-12 rounded-lg shadow-lg"
                 animate={{ 
@@ -205,6 +203,6 @@ const Login: React.FC = () => {
       </motion.div>
     </div>
   );
-};
+}
 
 export default Login;

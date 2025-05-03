@@ -2,35 +2,25 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 
-interface PredictionResult {
-  symbol: string;
-  predictedPrice: number;
-  predictedChangePercent: number;
-  recommendation: string;
-  description: string;
-}
-
-const TFPredictionsHoldings: React.FC = () => {
-  const [predictions, setPredictions] = useState<PredictionResult[]>([]);
+function TFPredictionsHoldings() {
+  const [predictions, setPredictions] = useState([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
+    async function fetchData() {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get<PredictionResult[]>(
+        const res = await axios.get(
           "http://localhost:3000/api/tf-holdings-predictions",
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
         setPredictions(res.data);
-      } catch (err: any) {
+      } catch (err) {
         setError(err.response?.data?.message || "Error fetching predictions");
       }
-    };
+    }
     fetchData();
   }, []);
 
@@ -96,9 +86,7 @@ const TFPredictionsHoldings: React.FC = () => {
                 >
                   {pred.recommendation}
                 </td>
-                <td className="py-2 px-4 text-white">
-                  {pred.description}
-                </td>
+                <td className="py-2 px-4 text-white">{pred.description}</td>
               </motion.tr>
             ))}
           </tbody>
@@ -108,6 +96,6 @@ const TFPredictionsHoldings: React.FC = () => {
       )}
     </div>
   );
-};
+}
 
 export default TFPredictionsHoldings;

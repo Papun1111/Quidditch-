@@ -1,26 +1,26 @@
-import React, { useState, FormEvent, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../components/AuthContext';
 import { motion } from 'framer-motion';
 
-const Signup: React.FC = () => {
+function Signup() {
   const { saveToken } = useContext(AuthContext);
   const navigate = useNavigate();
-  const [username, setUsername] = useState<string>("");
-  const [name, setName] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [error, setError] = useState<string>("");
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const res = await axios.post("http://localhost:3000/api/signup", { username, name, email, password });
       // Auto-login after signup: store token and navigate to dashboard
       saveToken(res.data.token);
       navigate("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
       setError(err.response?.data?.message || "Signup failed");
     }
   };
@@ -120,6 +120,6 @@ const Signup: React.FC = () => {
       </motion.div>
     </motion.div>
   );
-};
+}
 
 export default Signup;

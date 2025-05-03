@@ -7,20 +7,34 @@ import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './components/AuthContext';
 import VRTradingPit from './components/VRTradingPit';
 
-const App: React.FC = () => {
+function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/vr" element={<PrivateRoute><VRTradingPit /></PrivateRoute>} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/vr"
+            element={
+              <PrivateRoute>
+                <VRTradingPit />
+              </PrivateRoute>
+            }
+          />
           <Route path="*" element={<Login />} />
         </Routes>
       </Router>
     </AuthProvider>
   );
-};
+}
 
 export default App;
