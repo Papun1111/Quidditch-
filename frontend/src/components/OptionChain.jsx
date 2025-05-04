@@ -11,7 +11,7 @@ function OptionChain() {
   const [symbol, setSymbol] = useState('');
   const [optionChain, setOptionChain] = useState([]);
   const [error, setError] = useState('');
-
+  const url=import.meta.env.VITE_API_URL;
   const handleFetch = async () => {
     if (!symbol) {
       setError('Please enter a stock symbol.');
@@ -19,7 +19,7 @@ function OptionChain() {
     }
     setError('');
     try {
-      const res = await axios.get(`https://zerodhaclonerepo.onrender.com/api/option-chain/${symbol}`);
+      const res = await axios.get(`${url}/option-chain/${symbol}`);
       setOptionChain(res.data.optionChain);
     } catch (err) {
       setError(err.response?.data?.message || 'Error fetching option chain');

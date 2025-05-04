@@ -11,11 +11,11 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
+  const url=import.meta.env.VITE_API_URL;
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("https://zerodhaclonerepo.onrender.com/api/login", { email, password });
+      const res = await axios.post(`${url}/login`, { email, password });
       saveToken(res.data.token);
       navigate("/dashboard");
     } catch (err) {

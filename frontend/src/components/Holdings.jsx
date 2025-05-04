@@ -164,7 +164,7 @@ function Holdings() {
   const { token } = useContext(AuthContext);
   const mainContainerRef = useRef(null);
   const spotlight = useSpotlight(mainContainerRef);
-
+  const url=import.meta.env.VITE_API_URL;
   const getStableAnalytics = () => {
     const stableData = {};
     const symbols = ["AAPL","GOOGL","MSFT","AMZN","META","NFLX","TSLA","NVDA"];
@@ -188,7 +188,7 @@ function Holdings() {
       setError(null);
       try {
         await new Promise((r) => setTimeout(r, 800));
-        const res = await axios.get("https://zerodhaclonerepo.onrender.com/api/holdings", {
+        const res = await axios.get(`${url}/holdings`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setHoldings(res.data);

@@ -5,13 +5,13 @@ import { motion } from "framer-motion";
 function TFPredictionsHoldings() {
   const [predictions, setPredictions] = useState([]);
   const [error, setError] = useState("");
-
+  const url=import.meta.env.VITE_API_URL;
   useEffect(() => {
     async function fetchData() {
       try {
         const token = localStorage.getItem("token");
         const res = await axios.get(
-          "https://zerodhaclonerepo.onrender.com/api/tf-holdings-predictions",
+        `${url}/tf-holdings-predictions`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

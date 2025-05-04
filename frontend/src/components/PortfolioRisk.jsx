@@ -127,7 +127,7 @@ function PortfolioRisk() {
   const [isDark, setIsDark] = useState(false);
   const [showRisk, setShowRisk] = useState(true);
   const [showTraj, setShowTraj] = useState(true);
-
+  const url=import.meta.env.VITE_API_URL;
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     setIsDark(mq.matches);
@@ -139,7 +139,7 @@ function PortfolioRisk() {
   useEffect(() => {
     async function fetchRisk() {
       try {
-        const res = await axios.get('https://zerodhaclonerepo.onrender.com/api/portfolio-risk', {
+        const res = await axios.get(`${url}/portfolio-risk`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         console.log('Risk data received:', res.data);

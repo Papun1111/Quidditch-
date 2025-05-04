@@ -44,11 +44,11 @@ function StockTrends() {
   const [selectedSymbols, setSelectedSymbols] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const url=import.meta.env.VITE_API_URL;
   useEffect(() => {
     async function fetchTrends() {
       try {
-        const res = await axios.get('https://zerodhaclonerepo.onrender.com/api/stock-trends');
+        const res = await axios.get(`${url}/stock-trends`);
         setTrends(res.data);
         setSelectedSymbols(res.data.map(stock => stock.symbol));
       } catch (err) {

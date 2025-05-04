@@ -256,10 +256,10 @@ function VRTradingPit() {
   const mainControls   = useAnimation();
   const chartsControls = useAnimation();
   const vrSceneControls= useAnimation();
-
+  const url=import.meta.env.VITE_API_URL;
   // Initial fetch
   useEffect(() => {
-    axios.get('https://zerodhaclonerepo.onrender.com/api/vr-trading-pit')
+    axios.get(`${url}/vr-trading-pit`)
       .then(res => {
         setVrData(res.data);
         setHistoricalData(generateHistoricalData(res.data.avgPercentChange));

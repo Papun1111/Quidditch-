@@ -166,14 +166,14 @@ function Positions() {
   const { token } = useContext(AuthContext);
   const containerRef = useRef(null);
   const spotlight = useSpotlight(containerRef);
-
+  const url=import.meta.env.VITE_API_URL;
   useEffect(() => {
     async function fetchPositions() {
       setIsLoading(true);
       setError(null);
       try {
         await new Promise(r => setTimeout(r, 800));
-        const res = await axios.get("https://zerodhaclonerepo.onrender.com/api/positions", {
+        const res = await axios.get(`${url}/positions`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setPositions(res.data);

@@ -12,7 +12,7 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
+  const url=import.meta.env.VITE_API_URL;
   // Letter animation for the welcome text
   const letterVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -33,7 +33,7 @@ function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post("https://zerodhaclonerepo.onrender.com/api/signup", { 
+      const res = await axios.post(`${url}/signup`, { 
         username, 
         name, 
         email, 

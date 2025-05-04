@@ -23,7 +23,6 @@ function DecryptedText({
   const [revealedIndices, setRevealedIndices] = useState(new Set());
   const [hasAnimated, setHasAnimated] = useState(false);
   const containerRef = useRef(null);
-
   useEffect(() => {
     let interval;
     let currentIteration = 0;
@@ -190,11 +189,11 @@ function getTeamGradient(index) {
 function TeamPerformanceComponent() {
   const [data, setData] = useState([]);
   const [error, setError] = useState('');
-
+  const url=import.meta.env.VITE_API_URL;
   useEffect(() => {
     async function fetchPerformance() {
       try {
-        const res = await axios.get('https://zerodhaclonerepo.onrender.com/api/team-performance');
+        const res = await axios.get(`${url}/team-performance`);
         setData(res.data);
       } catch (err) {
         setError(err.response?.data?.message || 'Error fetching team performance');
